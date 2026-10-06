@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-vtop-lightBg text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEEE Lost & Found Portal - Hub</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vtop: {
+                            blue: '#1e5d9c',
+                            darkBlue: '#0f3d6b',
+                            accent: '#00a3e0',
+                            gold: '#ca8a04',
+                            green: '#16a34a',
+                            lightBg: '#f0f5fa',
+                            cardBg: '#ffffff',
+                            inputBg: '#edf3f8'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Smooth custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e5d9c;
+            border-radius: 3px;
+        }
+
+        /* VTOP Styled Card */
+        .vtop-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px -5px rgba(15, 61, 107, 0.1), 0 8px 10px -6px rgba(15, 61, 107, 0.05);
+        }
+
+        /* Interactive card hover glow */
+        .vtop-box-btn {
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .vtop-box-btn:hover {
+            border-color: #00a3e0;
+            box-shadow: 0 12px 28px -5px rgba(30, 93, 156, 0.18);
+            transform: translateY(-2px);
+        }
+
+        /* Sub-option items smooth transition */
+        .sub-link-card {
+            transition: all 0.25s ease-in-out;
+        }
+        .sub-link-card:hover {
+            background: #f0f5fa;
+            border-color: #00a3e0;
+            transform: translateX(4px);
+        }
+    </style>
+</head>
+<body class="bg-vtop-lightBg min-h-screen font-sans text-slate-800 flex flex-col justify-between items-center p-4 sm:p-6 antialiased">
+
+    <header class="w-full max-w-md my-6 text-center">
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-vtop-darkBlue">
+            Lost <span class="text-vtop-accent">& Found</span>
+        </h1>
+        <p class="text-xs text-slate-500 mt-1 font-medium tracking-wide">Campus Portal Hub</p>
+    </header>
+
+    <main class="w-full max-w-md my-auto space-y-5">
+
+        <!-- ================= BOX 1: LOST ================= -->
+        <div class="vtop-card vtop-box-btn rounded-3xl overflow-hidden transition-all duration-300">
+            <!-- Main Clickable Header Box for LOST -->
+            <button type="button" onclick="toggleAccordion('lost-content', 'lost-icon', 'lost-badge')"
+                class="w-full p-6 text-left flex items-center justify-between group focus:outline-none">
+                <div class="flex items-center space-x-4">
+                    <div class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 group-hover:bg-rose-100 group-hover:scale-105 transition-all">
+                        <i class="fa-solid fa-magnifying-glass-location text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-black tracking-wider text-vtop-darkBlue">LOST</span>
+                            <span id="lost-badge" class="px-2.5 py-0.5 text-[10px] font-bold rounded-full border bg-rose-50 text-rose-600 border-rose-200 transition-colors">Expand</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5 font-medium">Report or find misplaced items</p>
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-vtop-inputBg border border-slate-300 flex items-center justify-center text-slate-600 group-hover:text-vtop-blue transition-all">
+                    <i id="lost-icon" class="fa-solid fa-chevron-down text-sm transition-transform duration-300"></i>
+                </div>
+            </button>
+
+            <!-- Expanded Sub-Links for LOST -->
+            <div id="lost-content" class="hidden border-t border-slate-200 bg-slate-50/50 p-4 space-y-3">
+                <!-- Link 1: Enter a Lost Item -->
+                <button type="button" onclick="triggerNav('lostEntry.html')"
+                    class="sub-link-card w-full p-3.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between group text-left shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-circle-plus"></i>
+                        </div>
+                        <div> 
+                            <p class="text-sm font-bold text-vtop-darkBlue group-hover:text-vtop-blue transition-colors">Enter a Lost Item</p>
+                            <p class="text-[11px] text-slate-500 font-medium">Fill out a report for your missing belonging</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-xs text-slate-400 group-hover:text-vtop-blue transition-colors"></i>
+                </button>
+
+                <!-- Link 2: View All Lost Items -->
+                <button type="button" onclick="triggerNav('lostList.html')"
+                    class="sub-link-card w-full p-3.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between group text-left shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-vtop-darkBlue group-hover:text-vtop-blue transition-colors">View All Lost Items</p>
+                            <p class="text-[11px] text-slate-500 font-medium">Browse total list of lost item declarations</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-xs text-slate-400 group-hover:text-vtop-blue transition-colors"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= BOX 2: FOUND ================= -->
+        <div class="vtop-card vtop-box-btn rounded-3xl overflow-hidden transition-all duration-300">
+            <!-- Main Clickable Header Box for FOUND -->
+            <button type="button" onclick="toggleAccordion('found-content', 'found-icon', 'found-badge')"
+                class="w-full p-6 text-left flex items-center justify-between group focus:outline-none">
+                <div class="flex items-center space-x-4">
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-100 group-hover:scale-105 transition-all">
+                        <i class="fa-solid fa-hand-holding-heart text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-black tracking-wider text-vtop-darkBlue">FOUND</span>
+                            <span id="found-badge" class="px-2.5 py-0.5 text-[10px] font-bold rounded-full border bg-emerald-50 text-emerald-600 border-emerald-200 transition-colors">Expand</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5 font-medium">Submit or discover recovered items</p>
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-vtop-inputBg border border-slate-300 flex items-center justify-center text-slate-600 group-hover:text-vtop-blue transition-all">
+                    <i id="found-icon" class="fa-solid fa-chevron-down text-sm transition-transform duration-300"></i>
+                </div>
+            </button>
+
+            <!-- Expanded Sub-Links for FOUND -->
+            <div id="found-content" class="hidden border-t border-slate-200 bg-slate-50/50 p-4 space-y-3">
+                <!-- Link 1: Enter a Found Item -->
+                <button type="button" onclick="triggerNav('foundEntry.html')"
+                    class="sub-link-card w-full p-3.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between group text-left shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-box-archive"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-vtop-darkBlue group-hover:text-vtop-blue transition-colors">Enter a Found Item</p>
+                            <p class="text-[11px] text-slate-500 font-medium">Log an item you discovered on campus</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-xs text-slate-400 group-hover:text-vtop-blue transition-colors"></i>
+                </button>
+
+                <!-- Link 2: View All Found Items -->
+                <button type="button" onclick="triggerNav('foundList.html')"
+                    class="sub-link-card w-full p-3.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between group text-left shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-vtop-darkBlue group-hover:text-vtop-blue transition-colors">View All Found Items</p>
+                            <p class="text-[11px] text-slate-500 font-medium">Browse all recovered items currently held</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-xs text-slate-400 group-hover:text-vtop-blue transition-colors"></i>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
+
+    <footer class="w-full max-w-md my-6 text-center text-xs text-slate-500 space-y-1 font-medium">
+        <p>© 2026 IEEE Student Branch. All rights reserved.</p>
+        <p class="text-[11px] text-slate-400">Built for IEEE Campus Utility</p>
+    </footer>
+
+    <script>
+        // Accordion toggle function for LOST and FOUND boxes
+        function toggleAccordion(contentId, iconId, badgeId) {
+            const content = document.getElementById(contentId);
+            const icon = document.getElementById(iconId);
+            const badge = document.getElementById(badgeId);
+
+            const isHidden = content.classList.contains('hidden');
+
+            if (isHidden) {
+                content.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+                badge.textContent = 'Active';
+                badge.className = 'px-2.5 py-0.5 text-[10px] font-bold rounded-full border bg-vtop-blue/10 text-vtop-blue border-vtop-blue/30 transition-colors';
+            } else {
+                content.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+                badge.textContent = 'Expand';
+                if (contentId.includes('lost')) {
+                    badge.className = 'px-2.5 py-0.5 text-[10px] font-bold rounded-full border bg-rose-50 text-rose-600 border-rose-200 transition-colors';
+                } else {
+                    badge.className = 'px-2.5 py-0.5 text-[10px] font-bold rounded-full border bg-emerald-50 text-emerald-600 border-emerald-200 transition-colors';
+                }
+            }
+        }
+
+        // Action trigger function with page navigation
+        function triggerNav(targetUrl) {
+            showToast(`Navigating to page...`, 'info');
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 500);
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            toast.className = `flex items-center gap-3 px-4 py-3.5 rounded-2xl border shadow-xl bg-white border-vtop-blue text-vtop-darkBlue text-xs font-semibold transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `
+                <i class="fa-solid fa-circle-info text-base flex-shrink-0 text-vtop-blue"></i>
+                <span class="text-slate-800 font-semibold">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

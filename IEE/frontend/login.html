@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEEE Lost & Found - Login & Registration</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vtop: {
+                            blue: '#1e5d9c',
+                            darkBlue: '#0f3d6b',
+                            accent: '#00a3e0',
+                            gold: '#ca8a04',
+                            green: '#16a34a',
+                            lightBg: '#f0f5fa',
+                            cardBg: '#ffffff',
+                            inputBg: '#edf3f8'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Modern scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e5d9c;
+            border-radius: 3px;
+        }
+
+        /* VTOP Styled Card */
+        .vtop-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px -5px rgba(15, 61, 107, 0.1), 0 8px 10px -6px rgba(15, 61, 107, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-vtop-lightBg min-h-full font-sans text-slate-800 flex flex-col justify-between items-center p-4 sm:p-6 antialiased">
+
+    <!-- Header / Branding -->
+    <header class="w-full max-w-md my-4 text-center">
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-vtop-darkBlue">
+            Lost <span class="text-vtop-accent">& Found</span> Portal
+        </h1>
+        <p class="text-xs text-slate-500 mt-1 font-medium">VIT Bhopal Branch Official Campus Student Utility</p>
+    </header>
+
+    <!-- Main Auth Card -->
+    <main class="w-full max-w-md my-auto">
+        <div class="vtop-card rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+
+            <!-- Tab Switcher (Login / Register) -->
+            <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200 mb-6">
+                <button type="button" id="tab-login" onclick="switchAuthMode('login')"
+                    class="py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 bg-vtop-blue text-white shadow-md">
+                    <i class="fa-solid fa-right-to-bracket mr-2"></i>Log In
+                </button>
+                <button type="button" id="tab-register" onclick="switchAuthMode('register')"
+                    class="py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 text-slate-600 hover:text-vtop-darkBlue">
+                    <i class="fa-solid fa-user-plus mr-2"></i>Sign Up
+                </button>
+            </div>
+
+            <!-- ================= LOGIN FORM ================= -->
+            <form id="form-login" onsubmit="handleLoginSubmit(event)" class="space-y-5">
+                <div class="text-center mb-2">
+                    <h2 class="text-lg font-bold text-vtop-darkBlue">Welcome Back</h2>
+                    <p class="text-xs text-slate-500">Log in with your official college credentials</p>
+                </div>
+
+                <!-- College Email Field -->
+                <div class="space-y-1.5">
+                    <label for="login-email" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">
+                        College Email
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-envelope"></i>
+                        </div>
+                        <input type="email" id="login-email" required
+                            placeholder="xyz.25bce10000@vitbhopal.ac.in"
+                            oninput="validateEmailField(this, 'login-email-msg')"
+                            class="w-full pl-10 pr-4 py-3 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20">
+                    </div>
+                    <p id="login-email-msg" class="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
+                        <i class="fa-solid fa-circle-info text-vtop-accent"></i> Must be an official campus email address.
+                    </p>
+                </div>
+
+                <!-- Password Field -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label for="login-password" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">
+                            Password
+                        </label>
+                        <a href="javascript:void(0)" onclick="forgotPasswordNotice()" class="text-xs font-semibold text-vtop-green hover:underline">Forgot Password?</a>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="login-password" required
+                            placeholder="••••••••"
+                            class="w-full pl-10 pr-11 py-3 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20">
+                        <button type="button" onclick="togglePasswordVisibility('login-password', 'login-pass-icon')"
+                            class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-vtop-darkBlue">
+                            <i id="login-pass-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember Me Checkbox -->
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="remember-me" class="w-4 h-4 rounded bg-slate-100 border-slate-300 text-vtop-blue focus:ring-vtop-blue">
+                    <label for="remember-me" class="text-xs text-slate-600 font-medium">Remember me on this device</label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit"
+                    class="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-vtop-blue hover:bg-vtop-darkBlue transition-all shadow-md shadow-vtop-blue/20 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Log In to Portal</span>
+                </button>
+            </form>
+
+            <!-- ================= REGISTER FORM ================= -->
+            <form id="form-register" onsubmit="handleRegisterSubmit(event)" class="space-y-4 hidden">
+                <div class="text-center mb-1">
+                    <h2 class="text-lg font-bold text-vtop-darkBlue">Create Account</h2>
+                    <p class="text-xs text-slate-500">Register as a student to access lost/found records</p>
+                </div>
+
+                <!-- Explicit College Email Prompt Message Box -->
+                <div class="p-3.5 rounded-xl bg-sky-50 border border-sky-200 text-xs text-slate-700 flex items-start space-x-2.5">
+                    <i class="fa-solid fa-graduation-cap text-lg text-vtop-blue flex-shrink-0 mt-0.5"></i>
+                    <div class="leading-relaxed">
+                        <strong class="font-bold text-vtop-darkBlue block mb-0.5">Campus Email Required:</strong>
+                        Please enter only your official college email ID (e.g., <span class="font-mono font-semibold text-vtop-blue">user@college.edu</span> or <span class="font-mono font-semibold text-vtop-blue">user@student.ac.in</span>) to proceed.
+                    </div>
+                </div>
+
+                <!-- 1. User College Email Address -->
+                <div class="space-y-1">
+                    <label for="reg-email" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">
+                        College Email Address <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-envelope"></i>
+                        </div>
+                        <input type="email" id="reg-email" required
+                            placeholder="xyz.25bce10000@vitbhopal.ac.in"
+                            oninput="validateEmailField(this, 'reg-email-msg')"
+                            class="w-full pl-10 pr-10 py-2.5 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20">
+                        <div id="reg-email-status-icon" class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-circle-question"></i>
+                        </div>
+                    </div>
+                    <p id="reg-email-msg" class="text-[11px] text-slate-500">Must end with .edu, .ac.in, or .edu.in domain.</p>
+                </div>
+
+                <!-- 2. Full Name -->
+                <div class="space-y-1">
+                    <label for="reg-name" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">
+                        Full Name <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <input type="text" id="reg-name" required
+                            placeholder="e.g. Aaryan Saxena"
+                            class="w-full pl-10 pr-4 py-2.5 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20">
+                    </div>
+                </div>
+
+                <!-- 3. Password Field with Visibility Toggle -->
+                <div class="space-y-1">
+                    <label for="reg-password" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">
+                        Password <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                        <input type="password" id="reg-password" required
+                            placeholder="Minimum 8 characters"
+                            class="w-full pl-10 pr-11 py-2.5 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20">
+                        <button type="button" onclick="togglePasswordVisibility('reg-password', 'reg-pass-icon')"
+                            class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-vtop-darkBlue">
+                            <i id="reg-pass-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Mobile Number with Country Selector -->
+                <div class="space-y-1">
+                    <label for="reg-phone" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">
+                        Mobile Number <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="flex space-x-2">
+                        <select id="country-code" class="bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 text-xs px-2.5 py-2.5 focus:outline-none focus:border-vtop-blue">
+                            <option value="+91">🇮🇳 +91</option>
+                        </select>
+                        <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-phone"></i>
+                            </div>
+                            <input type="tel" id="reg-phone" required
+                                placeholder="98765 43210" pattern="[0-9]{10}"
+                                class="w-full pl-10 pr-4 py-2.5 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit"
+                    class="w-full mt-2 py-3.5 rounded-xl font-bold text-sm text-white bg-vtop-blue hover:bg-vtop-darkBlue transition-all shadow-md shadow-vtop-blue/20 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-user-check"></i>
+                    <span>Register Student Account</span>
+                </button>
+            </form>
+
+        </div>
+    </main>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-md my-4 text-center text-xs text-slate-500 space-y-1 font-medium">
+        <p>© 2026 VIT Bhopal Student Branch. All rights reserved.</p>
+        <p class="text-[11px] text-slate-400">Built for IEEE Hackathon Project</p>
+    </footer>
+
+    <!-- JavaScript Interactions -->
+    <script>
+        // Switch between Login and Registration Views
+        function switchAuthMode(mode) {
+            const loginForm = document.getElementById('form-login');
+            const registerForm = document.getElementById('form-register');
+            const tabLogin = document.getElementById('tab-login');
+            const tabRegister = document.getElementById('tab-register');
+
+            if (mode === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                
+                tabLogin.className = "py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 bg-vtop-blue text-white shadow-md";
+                tabRegister.className = "py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 text-slate-600 hover:text-vtop-darkBlue";
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+
+                tabRegister.className = "py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 bg-vtop-blue text-white shadow-md";
+                tabLogin.className = "py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 text-slate-600 hover:text-vtop-darkBlue";
+            }
+        }
+
+        // Toggle Password Show/Hide Visibility
+        function togglePasswordVisibility(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye';
+            }
+        }
+
+        // College Domain Email Validation (.edu / .ac.in)
+        function validateEmailField(inputElement, msgElementId) {
+            const emailVal = inputElement.value.trim().toLowerCase();
+            const msgElement = document.getElementById(msgElementId);
+            const statusIcon = document.getElementById(inputElement.id + '-status-icon');
+
+            const collegePattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ac\.in|edu\.in)$/;
+
+            if (emailVal === '') {
+                inputElement.classList.remove('border-rose-500', 'border-emerald-500');
+                msgElement.innerHTML = `<i class="fa-solid fa-circle-info text-vtop-accent"></i> Must be an official campus email address.`;
+                msgElement.className = "text-[11px] text-slate-500 flex items-center gap-1 mt-1";
+                if (statusIcon) statusIcon.innerHTML = '<i class="fa-solid fa-circle-question"></i>';
+                return false;
+            }
+
+            if (collegePattern.test(emailVal)) {
+                inputElement.classList.remove('border-rose-500');
+                inputElement.classList.add('border-emerald-500');
+                msgElement.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i> Valid campus institutional email address.`;
+                msgElement.className = "text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-1";
+                if (statusIcon) {
+                    statusIcon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i>';
+                }
+                return true;
+            } else {
+                inputElement.classList.remove('border-emerald-500');
+                inputElement.classList.add('border-rose-500');
+                msgElement.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-500"></i> Please enter a valid college email (.edu / .ac.in).`;
+                msgElement.className = "text-[11px] text-rose-500 font-medium flex items-center gap-1 mt-1";
+                if (statusIcon) {
+                    statusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-500"></i>';
+                }
+                return false;
+            }
+        }
+
+        // Login Submit Handler
+        function handleLoginSubmit(event) {
+            event.preventDefault();
+            const emailInput = document.getElementById('login-email');
+            
+            if (!validateEmailField(emailInput, 'login-email-msg')) {
+                showToast("Please enter a valid official college email ID to log in.", "error");
+                return;
+            }
+
+            showToast("Login successful! Redirecting to IEEE Lost & Found Portal...", "success");
+        }
+
+        // Registration Submit Handler
+        function handleRegisterSubmit(event) {
+            event.preventDefault();
+            const regEmailInput = document.getElementById('reg-email');
+            const nameVal = document.getElementById('reg-name').value;
+
+            if (!validateEmailField(regEmailInput, 'reg-email-msg')) {
+                showToast("Registration denied! Only official college emails (.edu / .ac.in) are permitted.", "error");
+                return;
+            }
+
+            showToast(`Welcome ${nameVal}! Registration successful. Please check your inbox for verification.`, "success");
+            
+            setTimeout(() => {
+                switchAuthMode('login');
+            }, 1800);
+        }
+
+        function forgotPasswordNotice() {
+            showToast("Password reset instructions have been sent to your college administrator desk.", "info");
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let colorStyle = 'bg-white border-emerald-500 text-emerald-700 shadow-lg';
+            let icon = 'fa-circle-check';
+
+            if (type === 'error') {
+                colorStyle = 'bg-white border-rose-500 text-rose-700 shadow-lg';
+                icon = 'fa-circle-exclamation';
+            } else if (type === 'info') {
+                colorStyle = 'bg-white border-vtop-blue text-vtop-blue shadow-lg';
+                icon = 'fa-circle-info';
+            }
+
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl border-l-4 text-xs font-semibold transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto ${colorStyle}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icon} text-base flex-shrink-0"></i>
+                <span class="text-slate-700">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
