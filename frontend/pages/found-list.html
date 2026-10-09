@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-vtop-lightBg text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Found Items - IEEE</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vtop: {
+                            blue: '#1e5d9c',
+                            darkBlue: '#0f3d6b',
+                            accent: '#00a3e0',
+                            gold: '#ca8a04',
+                            green: '#16a34a',
+                            lightBg: '#f0f5fa',
+                            cardBg: '#ffffff',
+                            inputBg: '#edf3f8'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e5d9c;
+            border-radius: 3px;
+        }
+
+        /* VTOP Styled Card */
+        .vtop-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px -5px rgba(15, 61, 107, 0.1), 0 8px 10px -6px rgba(15, 61, 107, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-vtop-lightBg min-h-screen text-slate-800 font-sans antialiased">
+
+    <nav class="bg-vtop-darkBlue text-white shadow-md border-b border-vtop-blue/30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-magnifying-glass-location text-2xl text-vtop-accent"></i>
+                <span class="text-xl font-extrabold tracking-tight">Lost <span class="text-vtop-accent">& Found</span></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-xs font-semibold bg-vtop-blue/40 border border-vtop-accent/30 text-sky-100 px-3 py-1.5 rounded-full">
+                    IEEE Campus Portal
+                </div>
+                <a href="/pages/home.html" class="text-xs font-semibold text-sky-100 hover:underline">Home</a>
+                <button type="button" onclick="Api.logout()" class="text-xs font-semibold text-sky-100 hover:underline">Log out</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+        <div class="vtop-card p-6 rounded-3xl space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-vtop-darkBlue flex items-center gap-2.5">
+                        <i class="fa-solid fa-hand-holding-heart text-emerald-500"></i>
+                        All Found Items
+                    </h2>
+                    <p id="countText" class="text-slate-500 text-xs mt-1 font-medium">Loading...</p>
+                </div>
+                <a href="/pages/found-entry.html" class="inline-flex items-center justify-center gap-2 bg-vtop-blue hover:bg-vtop-darkBlue text-white text-sm font-bold py-2.5 px-4 rounded-xl shadow-md transition-all">
+                    <i class="fa-solid fa-circle-plus"></i>
+                    Report a Found Item
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                <div class="relative sm:col-span-6">
+                    <input type="text" id="searchInput" oninput="render()"
+                        class="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-300 bg-vtop-inputBg focus:bg-white focus:outline-none focus:ring-2 focus:ring-vtop-accent transition-all"
+                        placeholder="Search by name, place or description...">
+                    <i class="fa-solid fa-search absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+                </div>
+                <select id="categoryFilter" onchange="render()"
+                    class="sm:col-span-6 w-full px-3 py-2.5 text-sm rounded-xl border border-slate-300 bg-vtop-inputBg focus:bg-white focus:outline-none focus:ring-2 focus:ring-vtop-accent">
+                    <option value="">All categories</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="hidden text-xs font-semibold p-3.5 rounded-xl border"></div>
+
+        <div id="itemGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+
+        <div id="emptyState" class="hidden vtop-card rounded-3xl p-10 text-center text-slate-400">
+            <i class="fa-solid fa-inbox text-4xl mb-3 text-slate-300"></i>
+            <p class="font-bold text-vtop-darkBlue text-sm">No found items to show.</p>
+            <p class="text-xs text-slate-400 mt-1">Try a different search or filter, or report a new item.</p>
+        </div>
+    </main>
+
+    <script src="/assets/js/api.js"></script>
+    <script>
+        const ITEM_TYPE = 'found';
+        let items = [];
+
+        Api.requireAuth();
+
+        async function loadItems() {
+            try {
+                items = await Api.listItems({ type: ITEM_TYPE });
+                fillCategories();
+                render();
+            } catch (err) {
+                showMessage(err.message, 'error');
+            }
+        }
+
+        function fillCategories() {
+            const select = document.getElementById('categoryFilter');
+            const current = select.value;
+            const cats = Array.from(new Set(items.map(i => i.category))).sort();
+            select.innerHTML = '<option value="">All categories</option>' +
+                cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            select.value = cats.includes(current) ? current : '';
+        }
+
+        function render() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const grid = document.getElementById('itemGrid');
+            const empty = document.getElementById('emptyState');
+
+            const shown = items.filter(i =>
+                (!category || i.category === category) &&
+                (!query || [i.name, i.category, i.location, i.description].some(f => f.toLowerCase().includes(query)))
+            );
+
+            document.getElementById('countText').textContent =
+                shown.length + (shown.length === 1 ? ' item' : ' items') +
+                (shown.length !== items.length ? ' (filtered from ' + items.length + ')' : '');
+
+            grid.innerHTML = '';
+            empty.classList.toggle('hidden', shown.length > 0);
+
+            shown.forEach(item => {
+                const resolved = item.status === 'resolved';
+                const card = document.createElement('div');
+                card.className = 'vtop-card rounded-2xl p-5 flex flex-col gap-3 hover:-translate-y-0.5 hover:shadow-lg transition-all' + (resolved ? ' opacity-60' : '');
+
+                const actions = '';
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <span class="inline-block px-2 py-0.5 rounded-md text-[11px] font-bold ${item.isCustomCategory ? 'bg-amber-100 text-amber-800' : 'bg-vtop-blue/10 text-vtop-blue'}">
+                            ${escapeHtml(item.category)}
+                        </span>
+                        ${resolved ? '<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Resolved</span>' : actions}
+                    </div>
+                    <h3 class="text-base font-extrabold text-vtop-darkBlue break-words">${escapeHtml(item.name)}</h3>
+                    <p class="text-xs text-slate-500 break-words ${item.description ? '' : 'italic'}">${escapeHtml(item.description || 'No additional details provided.')}</p>
+                    <div class="text-xs text-slate-600 space-y-1 mt-auto pt-3 border-t border-slate-100">
+                        <div><i class="fa-regular fa-calendar text-vtop-blue w-4"></i> ${escapeHtml(item.date)}</div>
+                        <div><i class="fa-solid fa-location-dot text-rose-500 w-4"></i> ${escapeHtml(item.location)}</div>
+                        <div><i class="fa-solid fa-user text-slate-400 w-4"></i> ${escapeHtml(item.reporter)}</div>
+                        <div class="font-mono text-[11px] break-all"><i class="fa-solid fa-phone text-slate-400 w-4"></i> ${escapeHtml(item.contactInfo)}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showMessage(text, type) {
+            const el = document.getElementById('statusMessage');
+            el.textContent = text;
+            el.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'bg-rose-50', 'text-rose-800', 'border-rose-200', 'bg-sky-50', 'text-sky-800', 'border-sky-200');
+            if (type === 'success') el.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+            else if (type === 'error') el.classList.add('bg-rose-50', 'text-rose-800', 'border-rose-200');
+            else el.classList.add('bg-sky-50', 'text-sky-800', 'border-sky-200');
+            clearTimeout(showMessage.timer);
+            showMessage.timer = setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, function (m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+
+        loadItems();
+    </script>
+</body>
+</html>
