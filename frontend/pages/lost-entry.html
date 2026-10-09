@@ -261,6 +261,11 @@
                 await loadEntries();
 
                 let text = ITEM_TYPE.charAt(0).toUpperCase() + ITEM_TYPE.slice(1) + ' item entry registered successfully!';
+                if (result.matches && result.matches.length) {
+                    text += ' Possible matches: ' + result.matches.map(function (m) {
+                        return m.name + ' (' + m.location + ')';
+                    }).join(', ') + '.';
+                }
                 showMessage(text, 'success');
             } catch (err) {
                 showMessage(err.message, 'error');

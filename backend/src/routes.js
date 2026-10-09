@@ -3,6 +3,7 @@ const db = require('./db');
 const { HttpError, readJson, send } = require('./http');
 const { hashPassword, verifyPassword, signToken, verifyToken, DUMMY_HASH } = require('./auth');
 const { validateRegister, validateLogin, validateItem, CATEGORIES } = require('./validate');
+const { rankMatches } = require('./matching');
 
 const SESSION_TTL = 24 * 3600;
 const REMEMBER_TTL = 30 * 24 * 3600;
@@ -58,6 +59,16 @@ function findItem(id) {
   const row = db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).get(Number(id));
   if (!row) throw new HttpError(404, 'Item not found.');
   return row;
+}
+
+function matchesFor(row, viewerId) {
+  const opposite = row.type === 'lost' ? 'found' : 'lost';
+  const candidates = db
+    .prepare(`${ITEM_SELECT} WHERE i.type = ? AND i.status = 'open' AND i.user_id != ?`)
+    .all(opposite, row.user_id)
+    .map((r) => toItem(r, viewerId));
+  const subject = { name: row.name, category: row.category, location: row.location, description: row.description, date: row.date };
+  return rankMatches(subject, candidates);
 }
 
 const escapeLike = (s) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -159,10 +170,15 @@ route('POST', '/api/items', { auth: true }, ({ body, user }) => {
     .run(value.type, value.name, value.category, value.isCustom ? 1 : 0, value.date, value.location, contact, value.description, user.id);
 
   const row = findItem(String(info.lastInsertRowid));
-  return [201, { item: toItem(row, user.id) }];
+  return [201, { item: toItem(row, user.id), matches: matchesFor(row, user.id) }];
 });
 
 route('GET', '/api/items/:id', { auth: true }, ({ params, user }) => ({ item: toItem(findItem(params.id), user.id) }));
+
+route('GET', '/api/items/:id/matches', { auth: true }, ({ params, user }) => {
+  const row = findItem(params.id);
+  return { matches: matchesFor(row, user.id) };
+});
 
 route('PATCH', '/api/items/:id/resolve', { auth: true }, ({ params, user }) => {
   const row = findItem(params.id);

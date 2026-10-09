@@ -6,6 +6,7 @@ Zero-dependency Node.js API for the FindIt Lost & Found portal. It uses Node's b
 
 ```bash
 node server.js     # http://localhost:3000
+node --test        # run the test suite
 ```
 
 The server also serves the `../frontend` folder, so the pages and the API share one origin.
@@ -31,6 +32,8 @@ src/db.js        SQLite schema
 src/auth.js      password hashing, signed tokens
 src/validate.js  input validation
 src/routes.js    API routes
+src/matching.js  lost/found match scoring
+test/            API tests
 ```
 
 API reference: [`../docs/api.md`](../docs/api.md)
