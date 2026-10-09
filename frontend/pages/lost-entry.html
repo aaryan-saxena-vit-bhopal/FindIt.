@@ -293,7 +293,13 @@
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition-colors';
 
-                const actions = '';
+                const actions = item.mine ? `
+                        <button onclick="resolveEntry(${item.id})" class="text-slate-400 hover:text-emerald-600 transition-colors p-1.5 rounded-lg hover:bg-emerald-50" title="Mark as resolved">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </button>
+                        <button onclick="deleteEntry(${item.id})" class="text-slate-400 hover:text-rose-600 transition-colors p-1.5 rounded-lg hover:bg-rose-50" title="Delete Entry">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>` : '';
 
                 tr.innerHTML = `
                     <td class="px-4 py-3.5">
@@ -328,6 +334,27 @@
                 item.location.toLowerCase().includes(query) ||
                 item.description.toLowerCase().includes(query)
             ));
+        }
+
+        async function deleteEntry(id) {
+            if (!confirm('Delete this entry?')) return;
+            try {
+                await Api.deleteItem(id);
+                await loadEntries();
+                showMessage('Entry removed.', 'info');
+            } catch (err) {
+                showMessage(err.message, 'error');
+            }
+        }
+
+        async function resolveEntry(id) {
+            try {
+                await Api.resolveItem(id);
+                await loadEntries();
+                showMessage('Entry marked as resolved.', 'success');
+            } catch (err) {
+                showMessage(err.message, 'error');
+            }
         }
 
         function showMessage(text, type) {

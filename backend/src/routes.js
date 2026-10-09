@@ -60,6 +60,8 @@ function findItem(id) {
   return row;
 }
 
+const escapeLike = (s) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
 const routes = [];
 function route(method, pattern, opts, handler) {
   const keys = [];
@@ -101,13 +103,47 @@ route('POST', '/api/auth/login', { auth: false, limited: true }, async ({ body }
 route('GET', '/api/auth/me', { auth: true }, ({ user }) => ({ user: publicUser(user) }));
 
 route('GET', '/api/items', { auth: true }, ({ query, user }) => {
-  const type = query.get('type');
-  if (type !== 'lost' && type !== 'found') throw new HttpError(400, 'type must be "lost" or "found".');
+  const where = [];
+  const params = [];
 
-  const rows = db
-    .prepare(`${ITEM_SELECT} WHERE i.type = ? AND i.status = 'open' ORDER BY i.created_at DESC, i.id DESC LIMIT 200`)
-    .all(type);
-  return { items: rows.map((r) => toItem(r, user.id)) };
+  const type = query.get('type');
+  if (type) {
+    if (type !== 'lost' && type !== 'found') throw new HttpError(400, 'type must be "lost" or "found".');
+    where.push('i.type = ?');
+    params.push(type);
+  }
+
+  const status = query.get('status') || 'open';
+  if (status !== 'all') {
+    if (status !== 'open' && status !== 'resolved') throw new HttpError(400, 'status must be open, resolved or all.');
+    where.push('i.status = ?');
+    params.push(status);
+  }
+
+  const category = query.get('category');
+  if (category) {
+    where.push('i.category = ?');
+    params.push(category);
+  }
+
+  if (query.get('mine') === '1') {
+    where.push('i.user_id = ?');
+    params.push(user.id);
+  }
+
+  const q = (query.get('q') || '').trim().slice(0, 100);
+  if (q) {
+    const like = `%${escapeLike(q.toLowerCase())}%`;
+    where.push(`(lower(i.name) LIKE ? ESCAPE '\\' OR lower(i.category) LIKE ? ESCAPE '\\' OR lower(i.location) LIKE ? ESCAPE '\\' OR lower(i.description) LIKE ? ESCAPE '\\')`);
+    params.push(like, like, like, like);
+  }
+
+  const limit = Math.min(Math.max(parseInt(query.get('limit'), 10) || 100, 1), 200);
+  const offset = Math.max(parseInt(query.get('offset'), 10) || 0, 0);
+
+  const sql = `${ITEM_SELECT} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY i.created_at DESC, i.id DESC LIMIT ? OFFSET ?`;
+  const rows = db.prepare(sql).all(...params, limit, offset);
+  return { items: rows.map((r) => toItem(r, user.id)), limit, offset };
 });
 
 route('POST', '/api/items', { auth: true }, ({ body, user }) => {
@@ -124,6 +160,22 @@ route('POST', '/api/items', { auth: true }, ({ body, user }) => {
 
   const row = findItem(String(info.lastInsertRowid));
   return [201, { item: toItem(row, user.id) }];
+});
+
+route('GET', '/api/items/:id', { auth: true }, ({ params, user }) => ({ item: toItem(findItem(params.id), user.id) }));
+
+route('PATCH', '/api/items/:id/resolve', { auth: true }, ({ params, user }) => {
+  const row = findItem(params.id);
+  if (row.user_id !== user.id) throw new HttpError(403, 'You can only update your own entries.');
+  db.prepare("UPDATE items SET status = 'resolved' WHERE id = ?").run(row.id);
+  return { item: toItem(findItem(params.id), user.id) };
+});
+
+route('DELETE', '/api/items/:id', { auth: true }, ({ params, user }) => {
+  const row = findItem(params.id);
+  if (row.user_id !== user.id) throw new HttpError(403, 'You can only delete your own entries.');
+  db.prepare('DELETE FROM items WHERE id = ?').run(row.id);
+  return { deleted: true };
 });
 
 async function handleApi(req, res, url) {

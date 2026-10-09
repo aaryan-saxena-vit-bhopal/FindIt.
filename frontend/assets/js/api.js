@@ -69,6 +69,12 @@
         },
         createItem(item) {
             return request('POST', '/api/items', item);
+        },
+        resolveItem(id) {
+            return request('PATCH', '/api/items/' + id + '/resolve');
+        },
+        deleteItem(id) {
+            return request('DELETE', '/api/items/' + id);
         }
     };
 })();

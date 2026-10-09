@@ -13,6 +13,10 @@ Authenticated routes need the header `Authorization: Bearer <token>`.
 | GET | `/api/items?type=lost` | yes | Open lost items, newest first |
 | GET | `/api/categories` | no | Valid category list |
 | GET | `/api/items?type=found` | yes | Open found items, newest first (found items can now be created too) |
+| GET | `/api/items` | yes | Extra query options: `q`, `category`, `status=open\|resolved\|all`, `mine=1`, `limit`, `offset`; `type` becomes optional |
+| GET | `/api/items/:id` | yes | Single item |
+| PATCH | `/api/items/:id/resolve` | owner | Mark an item resolved |
+| DELETE | `/api/items/:id` | owner | Delete an item |
 
 ## Rules
 
