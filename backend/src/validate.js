@@ -53,7 +53,7 @@ function validateItem(body) {
   const contactInfo = str(body.contactInfo);
   const description = str(body.description);
 
-  if (type !== 'lost') errors.type = 'Only "lost" items are supported.';
+  if (type !== 'lost' && type !== 'found') errors.type = 'Type must be "lost" or "found".';
   if (!name || name.length > 100) errors.name = 'Item name is required (max 100 characters).';
 
   let category = categoryRaw;

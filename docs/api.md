@@ -12,6 +12,7 @@ Authenticated routes need the header `Authorization: Bearer <token>`.
 | POST | `/api/items` | yes | `{type, name, category, customCategory?, date, location, contactInfo?, description?}` returns 201 `{item}` |
 | GET | `/api/items?type=lost` | yes | Open lost items, newest first |
 | GET | `/api/categories` | no | Valid category list |
+| GET | `/api/items?type=found` | yes | Open found items, newest first (found items can now be created too) |
 
 ## Rules
 

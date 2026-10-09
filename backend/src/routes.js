@@ -102,7 +102,7 @@ route('GET', '/api/auth/me', { auth: true }, ({ user }) => ({ user: publicUser(u
 
 route('GET', '/api/items', { auth: true }, ({ query, user }) => {
   const type = query.get('type');
-  if (type !== 'lost') throw new HttpError(400, 'type must be "lost".');
+  if (type !== 'lost' && type !== 'found') throw new HttpError(400, 'type must be "lost" or "found".');
 
   const rows = db
     .prepare(`${ITEM_SELECT} WHERE i.type = ? AND i.status = 'open' ORDER BY i.created_at DESC, i.id DESC LIMIT 200`)
