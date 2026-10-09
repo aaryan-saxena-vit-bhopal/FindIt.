@@ -4,7 +4,14 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'findit.db');
-if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+if (dbPath !== ':memory:') {
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  // `node server.js --fresh` wipes all users and items before starting.
+  if (process.argv.includes('--fresh')) {
+    for (const suffix of ['', '-wal', '-shm']) fs.rmSync(dbPath + suffix, { force: true });
+    console.log('Database wiped (--fresh).');
+  }
+}
 
 const db = new DatabaseSync(dbPath);
 

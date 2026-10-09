@@ -29,3 +29,5 @@ Authenticated routes need the header `Authorization: Bearer <token>`.
 ## Matching
 
 When an item is created, the API returns likely opposite-type items. The score combines category, name similarity, location similarity, description similarity and how close the dates are.
+
+`GET /api/items` also attaches a `matches` array (up to 3 `{id, name, location, date, reporter, contactInfo, matchScore}`) to every open item; the frontend shows it as a "Possible match" badge. An item is only a possible match if its score is at least 5, so a shared category alone is not enough. Start the server with `npm run start:fresh` to wipe all data first.

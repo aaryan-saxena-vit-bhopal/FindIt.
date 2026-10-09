@@ -191,6 +191,7 @@
                         ${resolved ? '<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">Resolved</span>' : actions}
                     </div>
                     <h3 class="text-base font-extrabold text-vtop-darkBlue break-words">${escapeHtml(item.name)}</h3>
+                    ${Api.matchBadge(item)}
                     <p class="text-xs text-slate-500 break-words ${item.description ? '' : 'italic'}">${escapeHtml(item.description || 'No additional details provided.')}</p>
                     <div class="text-xs text-slate-600 space-y-1 mt-auto pt-3 border-t border-slate-100">
                         <div><i class="fa-regular fa-calendar text-vtop-blue w-4"></i> ${escapeHtml(item.date)}</div>

@@ -71,6 +71,27 @@ function matchesFor(row, viewerId) {
   return rankMatches(subject, candidates);
 }
 
+// Attaches up to 3 possible opposite-type matches to every open item in a list.
+function withMatches(rows, viewerId) {
+  const items = rows.map((r) => toItem(r, viewerId));
+  if (!rows.some((r) => r.status === 'open')) return items.map((i) => ({ ...i, matches: [] }));
+  const pool = db
+    .prepare(`${ITEM_SELECT} WHERE i.status = 'open'`)
+    .all();
+  const byType = { lost: [], found: [] };
+  for (const r of pool) byType[r.type].push({ owner: r.user_id, item: toItem(r, viewerId) });
+  return rows.map((r, idx) => {
+    if (r.status !== 'open') return { ...items[idx], matches: [] };
+    const opposite = r.type === 'lost' ? 'found' : 'lost';
+    const candidates = byType[opposite].filter((c) => c.owner !== r.user_id).map((c) => c.item);
+    const matches = rankMatches(items[idx], candidates, 3).map((m) => ({
+      id: m.id, name: m.name, location: m.location, date: m.date,
+      reporter: m.reporter, contactInfo: m.contactInfo, matchScore: m.matchScore,
+    }));
+    return { ...items[idx], matches };
+  });
+}
+
 const escapeLike = (s) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 const routes = [];
@@ -154,7 +175,7 @@ route('GET', '/api/items', { auth: true }, ({ query, user }) => {
 
   const sql = `${ITEM_SELECT} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY i.created_at DESC, i.id DESC LIMIT ? OFFSET ?`;
   const rows = db.prepare(sql).all(...params, limit, offset);
-  return { items: rows.map((r) => toItem(r, user.id)), limit, offset };
+  return { items: withMatches(rows, user.id), limit, offset };
 });
 
 route('POST', '/api/items', { auth: true }, ({ body, user }) => {

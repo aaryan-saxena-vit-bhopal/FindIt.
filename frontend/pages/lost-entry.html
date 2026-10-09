@@ -314,6 +314,7 @@
                                 ${escapeHtml(item.category)}
                             </span>
                         </div>
+                        ${Api.matchBadge(item)}
                         ${item.description ? `<p class="text-[11px] text-slate-500 mt-1 line-clamp-1">${escapeHtml(item.description)}</p>` : ''}
                     </td>
                     <td class="px-4 py-3.5">

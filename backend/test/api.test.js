@@ -100,6 +100,18 @@ test('found item auto-matches the lost one', async () => {
   assert.equal(m.data.matches[0].id, foundId);
 });
 
+test('list shows possible matches next to items', async () => {
+  const lost = await api('GET', '/api/items?type=lost', { token: aliceToken });
+  const wallet = lost.data.items.find((i) => i.id === lostId);
+  assert.equal(wallet.matches.length, 1);
+  assert.equal(wallet.matches[0].id, foundId);
+  // Umbrella has no similar found item, so no badge data.
+  assert.equal(lost.data.items.find((i) => i.name === 'Umbrella').matches.length, 0);
+
+  const found = await api('GET', '/api/items?type=found', { token: bobToken });
+  assert.equal(found.data.items[0].matches[0].id, lostId);
+});
+
 test('list, filter, search, mine flag', async () => {
   let r = await api('GET', '/api/items?type=lost', { token: bobToken });
   assert.equal(r.data.items.length, 2);
