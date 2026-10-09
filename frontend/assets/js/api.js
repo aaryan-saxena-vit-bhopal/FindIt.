@@ -63,6 +63,12 @@
         },
         requireAuth() {
             if (!getToken()) location.replace('/index.html');
+        },
+        listItems(params) {
+            return request('GET', '/api/items?' + new URLSearchParams(params || {})).then(function (d) { return d.items; });
+        },
+        createItem(item) {
+            return request('POST', '/api/items', item);
         }
     };
 })();

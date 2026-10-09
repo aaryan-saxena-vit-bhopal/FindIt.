@@ -2,6 +2,16 @@
 
 const COLLEGE_EMAIL = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ac\.in|edu\.in)$/;
 
+const CATEGORIES = [
+  'Electronics',
+  'Documents & Cards',
+  'Clothing & Accessories',
+  'Keys',
+  'Bags & Luggage',
+  'Jewelry',
+  'Books & Stationery',
+];
+
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 
 function validateRegister(body) {
@@ -32,4 +42,42 @@ function validateLogin(body) {
   return { errors, value: { email, password, remember: body.remember === true } };
 }
 
-module.exports = { validateRegister, validateLogin };
+function validateItem(body) {
+  const errors = {};
+  const type = str(body.type);
+  const name = str(body.name);
+  const categoryRaw = str(body.category);
+  const customCategory = str(body.customCategory);
+  const date = str(body.date);
+  const location = str(body.location);
+  const contactInfo = str(body.contactInfo);
+  const description = str(body.description);
+
+  if (type !== 'lost') errors.type = 'Only "lost" items are supported.';
+  if (!name || name.length > 100) errors.name = 'Item name is required (max 100 characters).';
+
+  let category = categoryRaw;
+  let isCustom = false;
+  if (categoryRaw === 'Custom') {
+    isCustom = true;
+    category = customCategory;
+    if (!category || category.length > 40) errors.customCategory = 'Custom category is required (max 40 characters).';
+  } else if (!CATEGORIES.includes(categoryRaw)) {
+    errors.category = 'Choose a valid category.';
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) {
+    errors.date = 'Date must be in YYYY-MM-DD format.';
+  } else {
+    const limit = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+    if (date > limit) errors.date = 'Date cannot be in the future.';
+  }
+
+  if (!location || location.length > 100) errors.location = 'Location is required (max 100 characters).';
+  if (contactInfo.length > 100) errors.contactInfo = 'Contact info is too long (max 100 characters).';
+  if (description.length > 500) errors.description = 'Description is too long (max 500 characters).';
+
+  return { errors, value: { type, name, category, isCustom, date, location, contactInfo, description } };
+}
+
+module.exports = { validateRegister, validateLogin, validateItem, CATEGORIES };

@@ -2,7 +2,7 @@
 const db = require('./db');
 const { HttpError, readJson, send } = require('./http');
 const { hashPassword, verifyPassword, signToken, verifyToken, DUMMY_HASH } = require('./auth');
-const { validateRegister, validateLogin } = require('./validate');
+const { validateRegister, validateLogin, validateItem, CATEGORIES } = require('./validate');
 
 const SESSION_TTL = 24 * 3600;
 const REMEMBER_TTL = 30 * 24 * 3600;
@@ -29,6 +29,37 @@ setInterval(() => {
 }, AUTH_WINDOW_MS).unref();
 
 const publicUser = (u) => ({ id: u.id, email: u.email, name: u.name, phone: u.phone });
+const iso = (s) => s.replace(' ', 'T') + 'Z';
+
+const ITEM_SELECT = `
+  SELECT i.*, u.name AS reporter_name
+  FROM items i JOIN users u ON u.id = i.user_id`;
+
+function toItem(row, viewerId) {
+  return {
+    id: row.id,
+    type: row.type,
+    name: row.name,
+    category: row.category,
+    isCustomCategory: !!row.is_custom_category,
+    date: row.date,
+    location: row.location,
+    contactInfo: row.contact_info,
+    description: row.description,
+    status: row.status,
+    reporter: row.reporter_name,
+    mine: row.user_id === viewerId,
+    createdAt: iso(row.created_at),
+  };
+}
+
+function findItem(id) {
+  if (!/^\d+$/.test(id)) throw new HttpError(404, 'Item not found.');
+  const row = db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).get(Number(id));
+  if (!row) throw new HttpError(404, 'Item not found.');
+  return row;
+}
+
 const routes = [];
 function route(method, pattern, opts, handler) {
   const keys = [];
@@ -37,6 +68,8 @@ function route(method, pattern, opts, handler) {
 }
 
 route('GET', '/api/health', { auth: false }, () => ({ status: 'ok' }));
+
+route('GET', '/api/categories', { auth: false }, () => ({ categories: CATEGORIES }));
 
 route('POST', '/api/auth/register', { auth: false, limited: true }, async ({ body }) => {
   const { errors, value } = validateRegister(body);
@@ -66,6 +99,32 @@ route('POST', '/api/auth/login', { auth: false, limited: true }, async ({ body }
 });
 
 route('GET', '/api/auth/me', { auth: true }, ({ user }) => ({ user: publicUser(user) }));
+
+route('GET', '/api/items', { auth: true }, ({ query, user }) => {
+  const type = query.get('type');
+  if (type !== 'lost') throw new HttpError(400, 'type must be "lost".');
+
+  const rows = db
+    .prepare(`${ITEM_SELECT} WHERE i.type = ? AND i.status = 'open' ORDER BY i.created_at DESC, i.id DESC LIMIT 200`)
+    .all(type);
+  return { items: rows.map((r) => toItem(r, user.id)) };
+});
+
+route('POST', '/api/items', { auth: true }, ({ body, user }) => {
+  const { errors, value } = validateItem(body);
+  if (Object.keys(errors).length) throw new HttpError(400, 'Validation failed.', errors);
+
+  const contact = value.contactInfo || `${user.email} | ${user.phone}`;
+  const info = db
+    .prepare(
+      `INSERT INTO items (type, name, category, is_custom_category, date, location, contact_info, description, user_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(value.type, value.name, value.category, value.isCustom ? 1 : 0, value.date, value.location, contact, value.description, user.id);
+
+  const row = findItem(String(info.lastInsertRowid));
+  return [201, { item: toItem(row, user.id) }];
+});
 
 async function handleApi(req, res, url) {
   const match = routes.find((r) => r.method === req.method && r.regex.test(url.pathname));

@@ -20,6 +20,24 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS items (
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+  type               TEXT NOT NULL CHECK (type IN ('lost','found')),
+  name               TEXT NOT NULL,
+  category           TEXT NOT NULL,
+  is_custom_category INTEGER NOT NULL DEFAULT 0,
+  date               TEXT NOT NULL,
+  location           TEXT NOT NULL,
+  contact_info       TEXT NOT NULL,
+  description        TEXT NOT NULL DEFAULT '',
+  status             TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved')),
+  user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_items_type_status ON items(type, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_items_user ON items(user_id);
 `);
 
 module.exports = db;
