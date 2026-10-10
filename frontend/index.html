@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IEEE Lost & Found - Login & Registration</title>
+    <title>VIT Bhopal University Lost & Found - Login & Registration</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -279,8 +279,8 @@
 
     <!-- Footer -->
     <footer class="w-full max-w-md my-4 text-center text-xs text-slate-500 space-y-1 font-medium">
-        <p>© 2026 VIT Bhopal Student Branch. All rights reserved.</p>
-        <p class="text-[11px] text-slate-400">Built for IEEE Hackathon Project</p>
+        <p>© 2026 VIT Bhopal University. All rights reserved.</p>
+        <p class="text-[11px] text-slate-400">Made for VIT Bhopal University</p>
     </footer>
 
     <script src="/assets/js/api.js"></script>
@@ -377,7 +377,7 @@
                     document.getElementById('login-password').value,
                     document.getElementById('remember-me').checked
                 );
-                showToast("Login successful! Redirecting to IEEE Lost & Found Portal...", "success");
+                showToast("Login successful! Redirecting to VIT Bhopal Lost & Found Portal...", "success");
                 setTimeout(() => { window.location.href = '/pages/home.html'; }, 800);
             } catch (err) {
                 if (err.code === 'EMAIL_NOT_VERIFIED') {

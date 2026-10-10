@@ -80,6 +80,9 @@
         resolveItem(id) {
             return request('PATCH', '/api/items/' + id + '/resolve');
         },
+        matchesFor(id) {
+            return request('GET', '/api/items/' + id + '/matches').then(function (d) { return d.matches; });
+        },
         deleteItem(id) {
             return request('DELETE', '/api/items/' + id);
         }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lost Item Entry Portal - IEEE</title>
+    <title>Lost Item Entry Portal - VIT Bhopal</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -70,7 +70,7 @@
             </div>
             <div class="flex items-center gap-3">
                 <div class="text-xs font-semibold bg-vtop-blue/40 border border-vtop-accent/30 text-sky-100 px-3 py-1.5 rounded-full">
-                    IEEE Campus Portal
+                    VIT Bhopal University
                 </div>
                 <a href="/pages/home.html" class="text-xs font-semibold text-sky-100 hover:underline">Home</a>
                 <button type="button" onclick="Api.logout()" class="text-xs font-semibold text-sky-100 hover:underline">Log out</button>
@@ -166,6 +166,30 @@
 
             <!-- DISPLAY / RECORDS TABLE SECTION -->
             <div class="lg:col-span-7 space-y-4">
+
+                <!-- POSSIBLE MATCHES TABLE -->
+                <div id="matchesCard" class="vtop-card rounded-3xl overflow-hidden border-2 border-emerald-300 hidden">
+                    <div class="p-5 bg-emerald-50 flex items-center gap-3">
+                        <i class="fa-solid fa-link text-emerald-600 text-xl"></i>
+                        <div>
+                            <h3 class="text-base font-extrabold text-emerald-900">Possible Matches</h3>
+                            <p class="text-xs text-emerald-800 font-medium mt-0.5">Items reported by others that look like yours.</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 text-vtop-darkBlue font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-3.5">Matched Item</th>
+                                    <th class="px-4 py-3.5">Date & Location</th>
+                                    <th class="px-4 py-3.5">Contact</th>
+                                    <th class="px-4 py-3.5 text-right">Match</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matchesTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
                 <div class="vtop-card p-6 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h3 class="text-xl font-extrabold text-vtop-darkBlue flex items-center gap-2">
@@ -262,9 +286,7 @@
 
                 let text = ITEM_TYPE.charAt(0).toUpperCase() + ITEM_TYPE.slice(1) + ' item entry registered successfully!';
                 if (result.matches && result.matches.length) {
-                    text += ' Possible matches: ' + result.matches.map(function (m) {
-                        return m.name + ' (' + m.location + ')';
-                    }).join(', ') + '.';
+                    text += ' ' + result.matches.length + ' possible match(es) found. See the Possible Matches table.';
                 }
                 showMessage(text, 'success');
             } catch (err) {
@@ -272,10 +294,66 @@
             }
         }
 
+        async function loadMatches() {
+            try {
+                const mine = items.filter(function (i) { return i.mine && i.status === 'open'; });
+                const lists = await Promise.all(mine.map(function (i) {
+                    return Api.matchesFor(i.id)
+                        .then(function (ms) { return ms.map(function (m) { return Object.assign({}, m, { forItem: i.name }); }); })
+                        .catch(function () { return []; });
+                }));
+                const best = new Map();
+                lists.forEach(function (l) {
+                    l.forEach(function (m) {
+                        const prev = best.get(m.id);
+                        if (!prev || m.matchScore > prev.matchScore) best.set(m.id, m);
+                    });
+                });
+                renderMatches(Array.from(best.values()).sort(function (a, b) { return b.matchScore - a.matchScore; }));
+            } catch (err) {
+                renderMatches([]);
+            }
+        }
+
+        function renderMatches(list) {
+            const card = document.getElementById('matchesCard');
+            const tbody = document.getElementById('matchesTableBody');
+            tbody.innerHTML = '';
+            if (!list.length) {
+                card.classList.add('hidden');
+                return;
+            }
+            card.classList.remove('hidden');
+            list.forEach(function (m) {
+                const likely = m.matchScore >= 7;
+                const tr = document.createElement('tr');
+                tr.className = 'bg-emerald-50/40 hover:bg-emerald-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="px-4 py-3.5">
+                        <div class="font-bold text-vtop-darkBlue">${escapeHtml(m.name)}</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(m.type === 'found' ? 'Found' : 'Lost')} &middot; ${escapeHtml(m.category)}</div>
+                        <div class="text-[11px] text-emerald-700 font-semibold mt-0.5">Matches your: ${escapeHtml(m.forItem)}</div>
+                    </td>
+                    <td class="px-4 py-3.5">
+                        <div class="text-slate-700 font-medium"><i class="fa-regular fa-calendar text-vtop-blue mr-1"></i>${escapeHtml(m.date)}</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5"><i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>${escapeHtml(m.location)}</div>
+                    </td>
+                    <td class="px-4 py-3.5 text-slate-700 font-mono text-[11px]">
+                        <div class="font-sans font-semibold text-slate-600 mb-0.5">${escapeHtml(m.reporter)}</div>
+                        ${escapeHtml(m.contactInfo)}
+                    </td>
+                    <td class="px-4 py-3.5 text-right whitespace-nowrap">
+                        <span class="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${likely ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800'}">${likely ? 'Likely match' : 'Possible match'}</span>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
         async function loadEntries() {
             try {
                 items = await Api.listItems({ type: ITEM_TYPE });
                 filterEntries();
+                await loadMatches();
             } catch (err) {
                 showMessage(err.message, 'error');
             }
