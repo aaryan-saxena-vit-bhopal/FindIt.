@@ -1,12 +1,17 @@
 'use strict';
 const db = require('./db');
 const { HttpError, readJson, send } = require('./http');
-const { hashPassword, verifyPassword, signToken, verifyToken, DUMMY_HASH } = require('./auth');
-const { validateRegister, validateLogin, validateItem, CATEGORIES } = require('./validate');
+const { hashPassword, verifyPassword, signToken, verifyToken, DUMMY_HASH, generateCode, hashCode, codesMatch } = require('./auth');
+const { sendMail, verificationEmail } = require('./mailer');
+const { validateRegister, validateLogin, validateVerify, validateResend, validateItem, CATEGORIES } = require('./validate');
 const { rankMatches } = require('./matching');
 
 const SESSION_TTL = 24 * 3600;
 const REMEMBER_TTL = 30 * 24 * 3600;
+
+const CODE_TTL_MS = 10 * 60 * 1000;
+const CODE_COOLDOWN_MS = 60 * 1000;
+const MAX_CODE_ATTEMPTS = 5;
 
 const AUTH_LIMIT = Number(process.env.AUTH_RATE_LIMIT || 30);
 const AUTH_WINDOW_MS = 15 * 60 * 1000;
@@ -71,28 +76,24 @@ function matchesFor(row, viewerId) {
   return rankMatches(subject, candidates);
 }
 
-// Attaches up to 3 possible opposite-type matches to every open item in a list.
-function withMatches(rows, viewerId) {
-  const items = rows.map((r) => toItem(r, viewerId));
-  if (!rows.some((r) => r.status === 'open')) return items.map((i) => ({ ...i, matches: [] }));
-  const pool = db
-    .prepare(`${ITEM_SELECT} WHERE i.status = 'open'`)
-    .all();
-  const byType = { lost: [], found: [] };
-  for (const r of pool) byType[r.type].push({ owner: r.user_id, item: toItem(r, viewerId) });
-  return rows.map((r, idx) => {
-    if (r.status !== 'open') return { ...items[idx], matches: [] };
-    const opposite = r.type === 'lost' ? 'found' : 'lost';
-    const candidates = byType[opposite].filter((c) => c.owner !== r.user_id).map((c) => c.item);
-    const matches = rankMatches(items[idx], candidates, 3).map((m) => ({
-      id: m.id, name: m.name, location: m.location, date: m.date,
-      reporter: m.reporter, contactInfo: m.contactInfo, matchScore: m.matchScore,
-    }));
-    return { ...items[idx], matches };
-  });
-}
-
 const escapeLike = (s) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+async function issueCode(user) {
+  const now = Date.now();
+  const wait = Math.ceil((user.code_sent_at + CODE_COOLDOWN_MS - now) / 1000);
+  if (wait > 0) throw new HttpError(429, `Please wait ${wait} seconds before requesting another code.`);
+
+  const code = generateCode();
+  db.prepare('UPDATE users SET code_hash = ?, code_expires = ?, code_attempts = 0, code_sent_at = ? WHERE id = ?')
+    .run(hashCode(user.email, code), now + CODE_TTL_MS, now, user.id);
+
+  try {
+    await sendMail({ to: user.email, ...verificationEmail(user.name, code) });
+  } catch (err) {
+    db.prepare('UPDATE users SET code_sent_at = 0 WHERE id = ?').run(user.id);
+    throw err;
+  }
+}
 
 const routes = [];
 function route(method, pattern, opts, handler) {
@@ -109,15 +110,55 @@ route('POST', '/api/auth/register', { auth: false, limited: true }, async ({ bod
   const { errors, value } = validateRegister(body);
   if (Object.keys(errors).length) throw new HttpError(400, 'Validation failed.', errors);
 
-  if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(value.email)) {
+  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(value.email);
+  if (existing && existing.verified) {
     throw new HttpError(409, 'An account with this email already exists.', { email: 'Already registered.' });
   }
+
   const hash = await hashPassword(value.password);
-  const info = db
-    .prepare('INSERT INTO users (email, name, phone, password_hash) VALUES (?, ?, ?, ?)')
-    .run(value.email, value.name, value.phone, hash);
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(info.lastInsertRowid));
-  return [201, { user: publicUser(user), token: signToken(user.id, SESSION_TTL) }];
+  let user;
+  if (existing) {
+    db.prepare('UPDATE users SET name = ?, phone = ?, password_hash = ? WHERE id = ?')
+      .run(value.name, value.phone, hash, existing.id);
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id);
+  } else {
+    const info = db
+      .prepare('INSERT INTO users (email, name, phone, password_hash, verified) VALUES (?, ?, ?, ?, 0)')
+      .run(value.email, value.name, value.phone, hash);
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(info.lastInsertRowid));
+  }
+
+  await issueCode(user);
+  return [201, { pendingVerification: true, email: user.email }];
+});
+
+route('POST', '/api/auth/verify', { auth: false, limited: true }, ({ body }) => {
+  const { errors, value } = validateVerify(body);
+  if (Object.keys(errors).length) throw new HttpError(400, 'Validation failed.', errors);
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(value.email);
+  const invalid = new HttpError(400, 'Invalid or expired code.');
+  if (!user) throw invalid;
+  if (user.verified) throw new HttpError(400, 'This email is already verified. Please log in.');
+  if (!user.code_hash || user.code_expires < Date.now()) throw invalid;
+  if (user.code_attempts >= MAX_CODE_ATTEMPTS) {
+    throw new HttpError(429, 'Too many wrong attempts. Request a new code.');
+  }
+
+  db.prepare('UPDATE users SET code_attempts = code_attempts + 1 WHERE id = ?').run(user.id);
+  if (!codesMatch(user.email, value.code, user.code_hash)) throw invalid;
+
+  db.prepare('UPDATE users SET verified = 1, code_hash = NULL, code_expires = 0, code_attempts = 0 WHERE id = ?').run(user.id);
+  return { user: publicUser(user), token: signToken(user.id, SESSION_TTL) };
+});
+
+route('POST', '/api/auth/resend', { auth: false, limited: true }, async ({ body }) => {
+  const { errors, value } = validateResend(body);
+  if (Object.keys(errors).length) throw new HttpError(400, 'Validation failed.', errors);
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(value.email);
+  if (user && !user.verified) await issueCode(user);
+  return { sent: true };
 });
 
 route('POST', '/api/auth/login', { auth: false, limited: true }, async ({ body }) => {
@@ -127,6 +168,9 @@ route('POST', '/api/auth/login', { auth: false, limited: true }, async ({ body }
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(value.email);
   const ok = await verifyPassword(value.password, user ? user.password_hash : DUMMY_HASH);
   if (!user || !ok) throw new HttpError(401, 'Incorrect email or password.');
+  if (!user.verified) {
+    throw new HttpError(403, 'Please verify your email first. Enter the code we sent you.', undefined, 'EMAIL_NOT_VERIFIED');
+  }
 
   const ttl = value.remember ? REMEMBER_TTL : SESSION_TTL;
   return { user: publicUser(user), token: signToken(user.id, ttl) };
@@ -175,7 +219,7 @@ route('GET', '/api/items', { auth: true }, ({ query, user }) => {
 
   const sql = `${ITEM_SELECT} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY i.created_at DESC, i.id DESC LIMIT ? OFFSET ?`;
   const rows = db.prepare(sql).all(...params, limit, offset);
-  return { items: withMatches(rows, user.id), limit, offset };
+  return { items: rows.map((r) => toItem(r, user.id)), limit, offset };
 });
 
 route('POST', '/api/items', { auth: true }, ({ body, user }) => {
@@ -228,7 +272,7 @@ async function handleApi(req, res, url) {
   if (match.auth) {
     const header = req.headers.authorization || '';
     const payload = header.startsWith('Bearer ') ? verifyToken(header.slice(7)) : null;
-    user = payload ? db.prepare('SELECT * FROM users WHERE id = ?').get(payload.sub) : null;
+    user = payload ? db.prepare('SELECT * FROM users WHERE id = ? AND verified = 1').get(payload.sub) : null;
     if (!user) throw new HttpError(401, 'Authentication required.');
   }
 

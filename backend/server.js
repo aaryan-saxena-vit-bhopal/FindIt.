@@ -53,7 +53,11 @@ const server = http.createServer(async (req, res) => {
     else serveStatic(req, res, url.pathname);
   } catch (err) {
     if (err instanceof HttpError) {
-      send(res, err.status, { error: err.message, ...(err.details ? { details: err.details } : {}) });
+      send(res, err.status, {
+        error: err.message,
+        ...(err.code ? { code: err.code } : {}),
+        ...(err.details ? { details: err.details } : {}),
+      });
     } else {
       console.error(err);
       if (!res.headersSent) send(res, 500, { error: 'Internal server error.' });

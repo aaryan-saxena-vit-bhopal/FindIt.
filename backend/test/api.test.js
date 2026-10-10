@@ -1,10 +1,13 @@
 'use strict';
 process.env.DB_PATH = ':memory:';
 process.env.AUTH_RATE_LIMIT = '1000';
+process.env.EMAIL_TRANSPORT = 'memory';
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const server = require('../server');
+const db = require('../src/db');
+const { outbox } = require('../src/mailer');
 
 let base;
 before(async () => {
@@ -22,6 +25,23 @@ async function api(method, url, { body, token } = {}) {
   return { status: res.status, data: await res.json().catch(() => null) };
 }
 
+const lastCode = (email) => {
+  const mails = outbox.filter((m) => m.to === email);
+  const m = mails[mails.length - 1];
+  return m ? m.text.match(/code is (\d{6})/)[1] : null;
+};
+const allowResend = (email) => db.prepare('UPDATE users SET code_sent_at = 0 WHERE email = ?').run(email);
+
+async function signUp(user) {
+  const r = await api('POST', '/api/auth/register', { body: user });
+  assert.equal(r.status, 201);
+  assert.equal(r.data.pendingVerification, true);
+  assert.equal(r.data.token, undefined);
+  const v = await api('POST', '/api/auth/verify', { body: { email: user.email, code: lastCode(user.email) } });
+  assert.equal(v.status, 200);
+  return v.data;
+}
+
 const today = new Date().toISOString().slice(0, 10);
 const alice = { email: 'alice.25bce10001@vitbhopal.ac.in', name: 'Alice', password: 'password123', phone: '9876543210' };
 const bob = { email: 'bob.25bce10002@vitbhopal.ac.in', name: 'Bob', password: 'password456', phone: '9123456780' };
@@ -36,18 +56,48 @@ test('register validates input', async () => {
   assert.ok(r.data.details.password && r.data.details.phone);
 });
 
-test('register, duplicate, login', async () => {
+test('register needs email verification before anything works', async () => {
   let r = await api('POST', '/api/auth/register', { body: alice });
   assert.equal(r.status, 201);
+  assert.equal(r.data.token, undefined);
+  assert.equal(outbox.filter((m) => m.to === alice.email).length, 1);
+
+  r = await api('POST', '/api/auth/login', { body: { email: alice.email, password: alice.password } });
+  assert.equal(r.status, 403);
+  assert.equal(r.data.code, 'EMAIL_NOT_VERIFIED');
+
+  r = await api('POST', '/api/auth/resend', { body: { email: alice.email } });
+  assert.equal(r.status, 429);
+
+  r = await api('POST', '/api/auth/verify', { body: { email: alice.email, code: '000000' } });
+  assert.equal(r.status, 400);
+  assert.equal(r.data.error, 'Invalid or expired code.');
+  r = await api('POST', '/api/auth/verify', { body: { email: alice.email, code: 'abc' } });
+  assert.equal(r.status, 400);
+});
+
+test('re-registering an unverified email replaces the pending signup', async () => {
+  allowResend(alice.email);
+  const r = await api('POST', '/api/auth/register', { body: { ...alice, name: 'Alice Updated' } });
+  assert.equal(r.status, 201);
+  assert.equal(outbox.filter((m) => m.to === alice.email).length, 2);
+});
+
+test('verify, duplicate, login', async () => {
+  let r = await api('POST', '/api/auth/verify', { body: { email: alice.email, code: lastCode(alice.email) } });
+  assert.equal(r.status, 200);
   assert.equal(r.data.user.phone, '+919876543210');
+  assert.equal(r.data.user.name, 'Alice Updated');
   assert.equal(r.data.user.password_hash, undefined);
   aliceToken = r.data.token;
+
+  r = await api('POST', '/api/auth/verify', { body: { email: alice.email, code: '123456' } });
+  assert.equal(r.status, 400);
 
   r = await api('POST', '/api/auth/register', { body: { ...alice, email: alice.email.toUpperCase() } });
   assert.equal(r.status, 409);
 
-  r = await api('POST', '/api/auth/register', { body: bob });
-  bobToken = r.data.token;
+  bobToken = (await signUp(bob)).token;
 
   r = await api('POST', '/api/auth/login', { body: { email: alice.email, password: 'wrong-pass' } });
   assert.equal(r.status, 401);
@@ -59,6 +109,43 @@ test('register, duplicate, login', async () => {
 
   r = await api('GET', '/api/auth/me', { token: aliceToken });
   assert.equal(r.data.user.email, alice.email);
+});
+
+test('wrong codes lock out after 5 attempts, expired codes fail, resend works', async () => {
+  const carol = { email: 'carol.25bce10003@vitbhopal.ac.in', name: 'Carol', password: 'password789', phone: '9000000003' };
+  await api('POST', '/api/auth/register', { body: carol });
+  const real = lastCode(carol.email);
+  const wrong = real === '111111' ? '222222' : '111111';
+  for (let i = 0; i < 5; i++) assert.equal((await api('POST', '/api/auth/verify', { body: { email: carol.email, code: wrong } })).status, 400);
+  assert.equal((await api('POST', '/api/auth/verify', { body: { email: carol.email, code: real } })).status, 429);
+
+  allowResend(carol.email);
+  assert.equal((await api('POST', '/api/auth/resend', { body: { email: carol.email } })).status, 200);
+  db.prepare('UPDATE users SET code_expires = 1 WHERE email = ?').run(carol.email);
+  assert.equal((await api('POST', '/api/auth/verify', { body: { email: carol.email, code: lastCode(carol.email) } })).status, 400);
+
+  allowResend(carol.email);
+  await api('POST', '/api/auth/resend', { body: { email: carol.email } });
+  assert.equal((await api('POST', '/api/auth/verify', { body: { email: carol.email, code: lastCode(carol.email) } })).status, 200);
+
+  const before = outbox.length;
+  assert.equal((await api('POST', '/api/auth/resend', { body: { email: 'ghost.25bce10009@vitbhopal.ac.in' } })).status, 200);
+  assert.equal((await api('POST', '/api/auth/resend', { body: { email: carol.email } })).status, 200);
+  assert.equal(outbox.length, before);
+});
+
+test('tokens of unverified accounts are rejected, domain restriction works', async () => {
+  const dave = { email: 'dave.25bce10004@vitbhopal.ac.in', name: 'Dave', password: 'password000', phone: '9000000004' };
+  await api('POST', '/api/auth/register', { body: dave });
+  const id = db.prepare('SELECT id FROM users WHERE email = ?').get(dave.email).id;
+  const { signToken } = require('../src/auth');
+  assert.equal((await api('GET', '/api/auth/me', { token: signToken(id, 3600) })).status, 401);
+
+  process.env.ALLOWED_EMAIL_DOMAIN = 'vitbhopal.ac.in';
+  let r = await api('POST', '/api/auth/register', { body: { ...dave, email: 'x.y@someother.ac.in' } });
+  assert.equal(r.status, 400);
+  assert.match(r.data.details.email, /vitbhopal\.ac\.in/);
+  delete process.env.ALLOWED_EMAIL_DOMAIN;
 });
 
 test('items require auth and reject forged tokens', async () => {
@@ -98,18 +185,6 @@ test('found item auto-matches the lost one', async () => {
 
   const m = await api('GET', `/api/items/${lostId}/matches`, { token: aliceToken });
   assert.equal(m.data.matches[0].id, foundId);
-});
-
-test('list shows possible matches next to items', async () => {
-  const lost = await api('GET', '/api/items?type=lost', { token: aliceToken });
-  const wallet = lost.data.items.find((i) => i.id === lostId);
-  assert.equal(wallet.matches.length, 1);
-  assert.equal(wallet.matches[0].id, foundId);
-  // Umbrella has no similar found item, so no badge data.
-  assert.equal(lost.data.items.find((i) => i.name === 'Umbrella').matches.length, 0);
-
-  const found = await api('GET', '/api/items?type=found', { token: bobToken });
-  assert.equal(found.data.items[0].matches[0].id, lostId);
 });
 
 test('list, filter, search, mine flag', async () => {

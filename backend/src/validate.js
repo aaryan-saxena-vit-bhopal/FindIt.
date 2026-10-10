@@ -12,6 +12,12 @@ const CATEGORIES = [
   'Books & Stationery',
 ];
 
+function allowedDomainError(email) {
+  const domain = (process.env.ALLOWED_EMAIL_DOMAIN || '').trim().toLowerCase().replace(/^@/, '');
+  if (domain && !email.endsWith('@' + domain)) return `Only @${domain} email addresses are allowed.`;
+  return null;
+}
+
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 
 function validateRegister(body) {
@@ -24,6 +30,9 @@ function validateRegister(body) {
 
   if (!COLLEGE_EMAIL.test(email) || email.length > 254) {
     errors.email = 'Use your official college email (.edu, .ac.in or .edu.in).';
+  } else {
+    const domainError = allowedDomainError(email);
+    if (domainError) errors.email = domainError;
   }
   if (name.length < 2 || name.length > 80) errors.name = 'Name must be 2-80 characters.';
   if (password.length < 8 || password.length > 128) errors.password = 'Password must be 8-128 characters.';
@@ -40,6 +49,22 @@ function validateLogin(body) {
   if (!COLLEGE_EMAIL.test(email)) errors.email = 'Use your official college email.';
   if (!password) errors.password = 'Password is required.';
   return { errors, value: { email, password, remember: body.remember === true } };
+}
+
+function validateVerify(body) {
+  const errors = {};
+  const email = str(body.email).toLowerCase();
+  const code = str(body.code);
+  if (!COLLEGE_EMAIL.test(email)) errors.email = 'Enter the email you signed up with.';
+  if (!/^\d{6}$/.test(code)) errors.code = 'Enter the 6-digit code from your email.';
+  return { errors, value: { email, code } };
+}
+
+function validateResend(body) {
+  const errors = {};
+  const email = str(body.email).toLowerCase();
+  if (!COLLEGE_EMAIL.test(email)) errors.email = 'Enter the email you signed up with.';
+  return { errors, value: { email } };
 }
 
 function validateItem(body) {
@@ -80,4 +105,4 @@ function validateItem(body) {
   return { errors, value: { type, name, category, isCustom, date, location, contactInfo, description } };
 }
 
-module.exports = { validateRegister, validateLogin, validateItem, CATEGORIES };
+module.exports = { validateRegister, validateLogin, validateVerify, validateResend, validateItem, CATEGORIES };

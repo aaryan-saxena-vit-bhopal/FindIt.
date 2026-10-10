@@ -7,7 +7,6 @@
   "engines": { "node": ">=22.5" },
   "scripts": {
     "start": "node server.js",
-    "start:fresh": "node server.js --fresh",
     "dev": "node --watch server.js",
     "test": "node --test"
   }

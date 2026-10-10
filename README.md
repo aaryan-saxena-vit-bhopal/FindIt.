@@ -5,6 +5,7 @@ A campus Lost & Found portal for VIT Bhopal students, built for an IEEE hackatho
 ## Features
 
 - Sign up and log in with a college email (`.edu`, `.ac.in`, `.edu.in`)
+- Email verification: a 6-digit code is emailed at signup, so only real, reachable addresses can create accounts
 - Report lost and found items with category, date and location
 - Grid view of all lost and all found items, with search and category filter
 - Automatic matching between lost and found reports
@@ -18,7 +19,7 @@ A campus Lost & Found portal for VIT Bhopal students, built for an IEEE hackatho
 | Frontend | HTML, Tailwind CSS, vanilla JavaScript |
 | Backend | Node.js (no external dependencies) |
 | Database | SQLite (built into Node) |
-| Auth | scrypt password hashing, signed tokens |
+| Auth | scrypt password hashing, signed tokens, emailed verification codes |
 
 ## Project structure
 
@@ -47,10 +48,10 @@ To run the tests: `node --test` inside `backend`.
 
 - [API reference](docs/api.md)
 - [Backend notes](backend/README.md)
+- [Email setup](docs/email-setup.md)
 
 ## Known limitations
 
-- No email verification yet. Anyone can register with an address that looks like a college email.
 - No password reset flow.
 - Item photos are not supported yet.
 

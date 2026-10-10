@@ -4,14 +4,7 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'findit.db');
-if (dbPath !== ':memory:') {
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  // `node server.js --fresh` wipes all users and items before starting.
-  if (process.argv.includes('--fresh')) {
-    for (const suffix of ['', '-wal', '-shm']) fs.rmSync(dbPath + suffix, { force: true });
-    console.log('Database wiped (--fresh).');
-  }
-}
+if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const db = new DatabaseSync(dbPath);
 
@@ -25,6 +18,11 @@ CREATE TABLE IF NOT EXISTS users (
   name          TEXT NOT NULL,
   phone         TEXT NOT NULL,
   password_hash TEXT NOT NULL,
+  verified      INTEGER NOT NULL DEFAULT 0,
+  code_hash     TEXT,
+  code_expires  INTEGER NOT NULL DEFAULT 0,
+  code_attempts INTEGER NOT NULL DEFAULT 0,
+  code_sent_at  INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -46,5 +44,17 @@ CREATE TABLE IF NOT EXISTS items (
 CREATE INDEX IF NOT EXISTS idx_items_type_status ON items(type, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_items_user ON items(user_id);
 `);
+
+const userColumns = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+if (!userColumns.includes('verified')) {
+  // Database created before email verification existed: keep those accounts usable.
+  db.exec(`
+    ALTER TABLE users ADD COLUMN verified INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE users ADD COLUMN code_hash TEXT;
+    ALTER TABLE users ADD COLUMN code_expires INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN code_attempts INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN code_sent_at INTEGER NOT NULL DEFAULT 0;
+  `);
+}
 
 module.exports = db;

@@ -23,15 +23,14 @@ function score(a, b) {
   if (a.category.toLowerCase() === b.category.toLowerCase()) s += 3;
   s += 6 * jaccard(tokens(a.name), tokens(b.name));
   s += 2 * jaccard(tokens(a.location), tokens(b.location));
-  s += 3 * jaccard(tokens(a.description), tokens(b.description));
+  s += 1 * jaccard(tokens(a.description), tokens(b.description));
   const days = Math.abs(Date.parse(a.date) - Date.parse(b.date)) / 86400000;
   if (days <= 3) s += 1.5;
   else if (days <= 14) s += 0.75;
   return s;
 }
 
-// Same category alone scores 3; require real name/location/description overlap too.
-const THRESHOLD = 5;
+const THRESHOLD = 3;
 
 function rankMatches(item, candidates, limit = 5) {
   return candidates

@@ -72,7 +72,7 @@
         <div class="vtop-card rounded-2xl p-6 sm:p-8 relative overflow-hidden">
 
             <!-- Tab Switcher (Login / Register) -->
-            <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200 mb-6">
+            <div id="tab-bar" class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200 mb-6">
                 <button type="button" id="tab-login" onclick="switchAuthMode('login')"
                     class="py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 bg-vtop-blue text-white shadow-md">
                     <i class="fa-solid fa-right-to-bracket mr-2"></i>Log In
@@ -239,8 +239,36 @@
                 <button type="submit"
                     class="w-full mt-2 py-3.5 rounded-xl font-bold text-sm text-white bg-vtop-blue hover:bg-vtop-darkBlue transition-all shadow-md shadow-vtop-blue/20 flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-user-check"></i>
-                    <span>Register Student Account</span>
+                    <span>Send Verification Code</span>
                 </button>
+            </form>
+
+            <!-- ================= VERIFY EMAIL FORM ================= -->
+            <form id="form-verify" onsubmit="handleVerifySubmit(event)" class="space-y-5 hidden">
+                <div class="text-center space-y-1">
+                    <div class="mx-auto w-12 h-12 rounded-full bg-vtop-blue/10 flex items-center justify-center text-vtop-blue text-xl mb-2">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
+                    </div>
+                    <h2 class="text-lg font-extrabold text-vtop-darkBlue">Verify your email</h2>
+                    <p class="text-xs text-slate-500">We sent a 6-digit code to</p>
+                    <p id="verify-email-text" class="text-sm font-bold text-vtop-darkBlue break-all"></p>
+                    <p class="text-[11px] text-slate-400">The code expires in 10 minutes. Check your spam folder too.</p>
+                </div>
+
+                <input type="text" id="verify-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required
+                    class="w-full text-center tracking-[0.5em] text-2xl font-extrabold py-3 rounded-xl border border-slate-300 bg-vtop-inputBg focus:bg-white focus:outline-none focus:ring-2 focus:ring-vtop-blue focus:border-vtop-blue transition-all"
+                    placeholder="------">
+
+                <button type="submit"
+                    class="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-vtop-blue hover:bg-vtop-darkBlue transition-all shadow-md shadow-vtop-blue/20 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Verify and continue</span>
+                </button>
+
+                <div class="flex items-center justify-between text-xs font-semibold">
+                    <button type="button" onclick="resendCode()" class="text-vtop-blue hover:underline">Resend code</button>
+                    <button type="button" onclick="switchAuthMode('register')" class="text-slate-500 hover:underline">Use a different email</button>
+                </div>
             </form>
 
         </div>
@@ -262,6 +290,8 @@
         function switchAuthMode(mode) {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
+            document.getElementById('form-verify').classList.add('hidden');
+            document.getElementById('tab-bar').classList.remove('hidden');
             const tabLogin = document.getElementById('tab-login');
             const tabRegister = document.getElementById('tab-register');
 
@@ -350,6 +380,11 @@
                 showToast("Login successful! Redirecting to IEEE Lost & Found Portal...", "success");
                 setTimeout(() => { window.location.href = '/pages/home.html'; }, 800);
             } catch (err) {
+                if (err.code === 'EMAIL_NOT_VERIFIED') {
+                    showVerify(emailInput.value.trim());
+                    resendCode(true);
+                    return;
+                }
                 showToast(err.message, "error");
             }
         }
@@ -366,17 +401,51 @@
             }
 
             try {
-                await Api.register({
+                const result = await Api.register({
                     email: regEmailInput.value.trim(),
                     name: nameVal,
                     password: document.getElementById('reg-password').value,
                     countryCode: document.getElementById('country-code').value,
                     phone: document.getElementById('reg-phone').value
                 });
-                showToast(`Welcome ${nameVal}! Registration successful. Taking you to the portal...`, "success");
-                setTimeout(() => { window.location.href = '/pages/home.html'; }, 1000);
+                showToast("We sent a 6-digit code to your email. Enter it to finish signing up.", "success");
+                showVerify(result.email);
             } catch (err) {
                 showToast(err.message, "error");
+            }
+        }
+
+        // Email verification step
+        let pendingEmail = '';
+
+        function showVerify(email) {
+            pendingEmail = email;
+            document.getElementById('verify-email-text').textContent = email;
+            document.getElementById('form-login').classList.add('hidden');
+            document.getElementById('form-register').classList.add('hidden');
+            document.getElementById('tab-bar').classList.add('hidden');
+            document.getElementById('form-verify').classList.remove('hidden');
+            document.getElementById('verify-code').value = '';
+            document.getElementById('verify-code').focus();
+        }
+
+        async function handleVerifySubmit(event) {
+            event.preventDefault();
+            try {
+                await Api.verifyEmail(pendingEmail, document.getElementById('verify-code').value.trim());
+                showToast("Email verified! Taking you to the portal...", "success");
+                setTimeout(() => { window.location.href = '/pages/home.html'; }, 800);
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function resendCode(quiet) {
+            try {
+                await Api.resendCode(pendingEmail);
+                showToast("A new code has been sent to your email.", "info");
+            } catch (err) {
+                if (!(quiet === true && err.status === 429)) showToast(err.message, "error");
             }
         }
 

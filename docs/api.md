@@ -5,8 +5,10 @@ Authenticated routes need the header `Authorization: Bearer <token>`.
 
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | no | `{email, name, password, phone, countryCode?}` returns 201 `{user, token}` |
-| POST | `/api/auth/login` | no | `{email, password, remember?}` returns `{user, token}` (valid 1 day, or 30 with `remember`) |
+| POST | `/api/auth/register` | no | `{email, name, password, phone, countryCode?}` creates an unverified account, emails a 6-digit code, returns 201 `{pendingVerification: true, email}` |
+| POST | `/api/auth/verify` | no | `{email, code}` marks the email verified and returns `{user, token}` |
+| POST | `/api/auth/resend` | no | `{email}` sends a fresh code (one per 60 seconds) |
+| POST | `/api/auth/login` | no | `{email, password, remember?}` returns `{user, token}` (valid 1 day, or 30 with `remember`). Unverified accounts get 403 with `code: "EMAIL_NOT_VERIFIED"` |
 | GET | `/api/auth/me` | yes | Current user |
 | GET | `/api/items` | yes | List items. Query: `type=lost\|found`, `q`, `category`, `status=open\|resolved\|all` (default `open`), `mine=1`, `limit`, `offset` |
 | POST | `/api/items` | yes | `{type, name, category, customCategory?, date, location, contactInfo?, description?}` returns 201 `{item, matches}` |
@@ -22,6 +24,8 @@ Authenticated routes need the header `Authorization: Bearer <token>`.
 - Email must end in `.edu`, `.ac.in` or `.edu.in`.
 - Mobile number: exactly 10 digits (+91).
 - Password: 8 to 128 characters.
+- Email verification: the code is 6 digits, valid for 10 minutes, with 5 attempts per code and one resend per 60 seconds. Accounts that are not verified cannot log in or use the API.
+- If `ALLOWED_EMAIL_DOMAIN` is set (for example `vitbhopal.ac.in`), only that domain can register.
 - Item date cannot be in the future.
 - `category: "Custom"` requires `customCategory`.
 - If `contactInfo` is omitted it defaults to the reporter's email and phone.
@@ -29,5 +33,3 @@ Authenticated routes need the header `Authorization: Bearer <token>`.
 ## Matching
 
 When an item is created, the API returns likely opposite-type items. The score combines category, name similarity, location similarity, description similarity and how close the dates are.
-
-`GET /api/items` also attaches a `matches` array (up to 3 `{id, name, location, date, reporter, contactInfo, matchScore}`) to every open item; the frontend shows it as a "Possible match" badge. An item is only a possible match if its score is at least 5, so a shared category alone is not enough. Start the server with `npm run start:fresh` to wipe all data first.

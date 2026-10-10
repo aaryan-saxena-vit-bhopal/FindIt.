@@ -63,4 +63,28 @@ function verifyToken(token) {
   }
 }
 
-module.exports = { hashPassword, verifyPassword, signToken, verifyToken, DUMMY_HASH };
+function generateCode() {
+  return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+}
+
+function hashCode(email, code) {
+  return crypto.createHmac('sha256', SECRET).update(`${email}:${code}`).digest('hex');
+}
+
+function codesMatch(email, code, storedHash) {
+  if (!storedHash) return false;
+  const a = Buffer.from(hashCode(email, code), 'hex');
+  const b = Buffer.from(storedHash, 'hex');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+module.exports = {
+  hashPassword,
+  verifyPassword,
+  signToken,
+  verifyToken,
+  DUMMY_HASH,
+  generateCode,
+  hashCode,
+  codesMatch,
+};
