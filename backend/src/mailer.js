@@ -68,4 +68,10 @@ function verificationEmail(name, code) {
   return { subject: 'Your FindIt verification code', text, html };
 }
 
-module.exports = { sendMail, verificationEmail, outbox };
+function resetEmail(name, code) {
+  const text = `Hi ${name},\n\nYour FindIt password reset code is ${code}.\nIt expires in 10 minutes. If you did not ask to reset your password, you can ignore this email and your password will stay the same.\n`;
+  const html = `<p>Hi ${String(name).replace(/[<>&]/g, '')},</p><p>Your FindIt password reset code is:</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px">${code}</p><p>It expires in 10 minutes. If you did not ask to reset your password, you can ignore this email and your password will stay the same.</p>`;
+  return { subject: 'Reset your FindIt password', text, html };
+}
+
+module.exports = { sendMail, verificationEmail, resetEmail, outbox };

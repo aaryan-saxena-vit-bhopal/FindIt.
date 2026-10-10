@@ -59,6 +59,12 @@
         resendCode(email) {
             return request('POST', '/api/auth/resend', { email: email });
         },
+        forgotPassword(email) {
+            return request('POST', '/api/auth/forgot', { email: email });
+        },
+        resetPassword(email, code, password) {
+            return request('POST', '/api/auth/reset', { email: email, code: code, password: password });
+        },
         async login(email, password, remember) {
             const data = await request('POST', '/api/auth/login', { email, password, remember: !!remember });
             setToken(data.token, remember);

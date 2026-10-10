@@ -23,6 +23,10 @@ CREATE TABLE IF NOT EXISTS users (
   code_expires  INTEGER NOT NULL DEFAULT 0,
   code_attempts INTEGER NOT NULL DEFAULT 0,
   code_sent_at  INTEGER NOT NULL DEFAULT 0,
+  reset_hash     TEXT,
+  reset_expires  INTEGER NOT NULL DEFAULT 0,
+  reset_attempts INTEGER NOT NULL DEFAULT 0,
+  reset_sent_at  INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -54,6 +58,17 @@ if (!userColumns.includes('verified')) {
     ALTER TABLE users ADD COLUMN code_expires INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN code_attempts INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN code_sent_at INTEGER NOT NULL DEFAULT 0;
+  `);
+}
+
+const hasReset = db.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'reset_hash');
+if (!hasReset) {
+  // Database created before password reset existed.
+  db.exec(`
+    ALTER TABLE users ADD COLUMN reset_hash TEXT;
+    ALTER TABLE users ADD COLUMN reset_expires INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN reset_attempts INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN reset_sent_at INTEGER NOT NULL DEFAULT 0;
   `);
 }
 

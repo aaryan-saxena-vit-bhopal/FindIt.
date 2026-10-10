@@ -235,3 +235,74 @@ test('misc: bad json, unknown route, static serving, traversal', async () => {
   });
   assert.notEqual(raw, 200);
 });
+
+const lastResetCode = (email) => {
+  const mails = outbox.filter((m) => m.to === email && /reset code is/.test(m.text));
+  const m = mails[mails.length - 1];
+  return m ? m.text.match(/reset code is (\d{6})/)[1] : null;
+};
+const allowReset = (email) => db.prepare('UPDATE users SET reset_sent_at = 0 WHERE email = ?').run(email);
+
+test('forgot password: emails a code, sets a new password, old one stops working', async () => {
+  const erin = { email: 'erin.25bce10005@vitbhopal.ac.in', name: 'Erin', password: 'oldpassword1', phone: '9000000005' };
+  await signUp(erin);
+
+  const before = outbox.length;
+  let r = await api('POST', '/api/auth/forgot', { body: { email: 'nobody.25bce99999@vitbhopal.ac.in' } });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.sent, true);
+  assert.equal(outbox.length, before, 'no email for unknown address');
+
+  r = await api('POST', '/api/auth/forgot', { body: { email: erin.email } });
+  assert.equal(r.status, 200);
+  const code = lastResetCode(erin.email);
+  assert.match(code, /^\d{6}$/);
+
+  r = await api('POST', '/api/auth/forgot', { body: { email: erin.email } });
+  assert.equal(r.status, 429);
+
+  r = await api('POST', '/api/auth/reset', { body: { email: erin.email, code, password: 'short' } });
+  assert.equal(r.status, 400);
+  assert.ok(r.data.details.password);
+
+  r = await api('POST', '/api/auth/reset', { body: { email: erin.email, code: code === '000000' ? '111111' : '000000', password: 'newpassword1' } });
+  assert.equal(r.status, 400);
+
+  r = await api('POST', '/api/auth/reset', { body: { email: erin.email, code, password: 'newpassword1' } });
+  assert.equal(r.status, 200);
+
+  r = await api('POST', '/api/auth/login', { body: { email: erin.email, password: erin.password } });
+  assert.equal(r.status, 401);
+  r = await api('POST', '/api/auth/login', { body: { email: erin.email, password: 'newpassword1' } });
+  assert.equal(r.status, 200);
+
+  r = await api('POST', '/api/auth/reset', { body: { email: erin.email, code, password: 'anotherpass1' } });
+  assert.equal(r.status, 400, 'a reset code works only once');
+});
+
+test('forgot password: expired codes fail and wrong guesses lock out', async () => {
+  const frank = { email: 'frank.25bce10006@vitbhopal.ac.in', name: 'Frank', password: 'frankpassword1', phone: '9000000006' };
+  await signUp(frank);
+
+  await api('POST', '/api/auth/forgot', { body: { email: frank.email } });
+  const code = lastResetCode(frank.email);
+  db.prepare('UPDATE users SET reset_expires = ? WHERE email = ?').run(Date.now() - 1000, frank.email);
+  let r = await api('POST', '/api/auth/reset', { body: { email: frank.email, code, password: 'newpassword2' } });
+  assert.equal(r.status, 400);
+
+  allowReset(frank.email);
+  await api('POST', '/api/auth/forgot', { body: { email: frank.email } });
+  const good = lastResetCode(frank.email);
+  const wrong = good === '123456' ? '654321' : '123456';
+  for (let i = 0; i < 5; i++) {
+    r = await api('POST', '/api/auth/reset', { body: { email: frank.email, code: wrong, password: 'newpassword2' } });
+    assert.equal(r.status, 400);
+  }
+  r = await api('POST', '/api/auth/reset', { body: { email: frank.email, code: good, password: 'newpassword2' } });
+  assert.equal(r.status, 429);
+
+  allowReset(frank.email);
+  await api('POST', '/api/auth/forgot', { body: { email: frank.email } });
+  r = await api('POST', '/api/auth/reset', { body: { email: frank.email, code: lastResetCode(frank.email), password: 'newpassword2' } });
+  assert.equal(r.status, 200);
+});

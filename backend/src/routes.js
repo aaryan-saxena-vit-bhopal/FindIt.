@@ -2,8 +2,8 @@
 const db = require('./db');
 const { HttpError, readJson, send } = require('./http');
 const { hashPassword, verifyPassword, signToken, verifyToken, DUMMY_HASH, generateCode, hashCode, codesMatch } = require('./auth');
-const { sendMail, verificationEmail } = require('./mailer');
-const { validateRegister, validateLogin, validateVerify, validateResend, validateItem, CATEGORIES } = require('./validate');
+const { sendMail, verificationEmail, resetEmail } = require('./mailer');
+const { validateRegister, validateLogin, validateVerify, validateResend, validateReset, validateItem, CATEGORIES } = require('./validate');
 const { rankMatches } = require('./matching');
 
 const SESSION_TTL = 24 * 3600;
@@ -95,6 +95,23 @@ async function issueCode(user) {
   }
 }
 
+async function issueResetCode(user) {
+  const now = Date.now();
+  const wait = Math.ceil((user.reset_sent_at + CODE_COOLDOWN_MS - now) / 1000);
+  if (wait > 0) throw new HttpError(429, `Please wait ${wait} seconds before requesting another code.`);
+
+  const code = generateCode();
+  db.prepare('UPDATE users SET reset_hash = ?, reset_expires = ?, reset_attempts = 0, reset_sent_at = ? WHERE id = ?')
+    .run(hashCode(`reset:${user.email}`, code), now + CODE_TTL_MS, now, user.id);
+
+  try {
+    await sendMail({ to: user.email, ...resetEmail(user.name, code) });
+  } catch (err) {
+    db.prepare('UPDATE users SET reset_sent_at = 0 WHERE id = ?').run(user.id);
+    throw err;
+  }
+}
+
 const routes = [];
 function route(method, pattern, opts, handler) {
   const keys = [];
@@ -159,6 +176,38 @@ route('POST', '/api/auth/resend', { auth: false, limited: true }, async ({ body 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(value.email);
   if (user && !user.verified) await issueCode(user);
   return { sent: true };
+});
+
+route('POST', '/api/auth/forgot', { auth: false, limited: true }, async ({ body }) => {
+  const { errors, value } = validateResend(body);
+  if (Object.keys(errors).length) throw new HttpError(400, 'Validation failed.', errors);
+
+  // Same answer whether or not the address has an account, so this cannot be used to look up who is registered.
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(value.email);
+  if (user) await issueResetCode(user);
+  return { sent: true };
+});
+
+route('POST', '/api/auth/reset', { auth: false, limited: true }, async ({ body }) => {
+  const { errors, value } = validateReset(body);
+  if (Object.keys(errors).length) throw new HttpError(400, 'Validation failed.', errors);
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(value.email);
+  const invalid = new HttpError(400, 'Invalid or expired code.');
+  if (!user || !user.reset_hash || user.reset_expires < Date.now()) throw invalid;
+  if (user.reset_attempts >= MAX_CODE_ATTEMPTS) {
+    throw new HttpError(429, 'Too many wrong attempts. Request a new code.');
+  }
+
+  db.prepare('UPDATE users SET reset_attempts = reset_attempts + 1 WHERE id = ?').run(user.id);
+  if (!codesMatch(`reset:${user.email}`, value.code, user.reset_hash)) throw invalid;
+
+  // Entering the emailed code proves the person owns the address, so the account counts as verified too.
+  const hash = await hashPassword(value.password);
+  db.prepare(`UPDATE users SET password_hash = ?, verified = 1,
+      reset_hash = NULL, reset_expires = 0, reset_attempts = 0,
+      code_hash = NULL, code_expires = 0, code_attempts = 0 WHERE id = ?`).run(hash, user.id);
+  return { reset: true };
 });
 
 route('POST', '/api/auth/login', { auth: false, limited: true }, async ({ body }) => {

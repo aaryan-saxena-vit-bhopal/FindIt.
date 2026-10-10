@@ -67,6 +67,17 @@ function validateResend(body) {
   return { errors, value: { email } };
 }
 
+function validateReset(body) {
+  const errors = {};
+  const email = str(body.email).toLowerCase();
+  const code = str(body.code);
+  const password = typeof body.password === 'string' ? body.password : '';
+  if (!COLLEGE_EMAIL.test(email)) errors.email = 'Enter the email you signed up with.';
+  if (!/^\d{6}$/.test(code)) errors.code = 'Enter the 6-digit code from your email.';
+  if (password.length < 8 || password.length > 128) errors.password = 'Password must be 8-128 characters.';
+  return { errors, value: { email, code, password } };
+}
+
 function validateItem(body) {
   const errors = {};
   const type = str(body.type);
@@ -105,4 +116,4 @@ function validateItem(body) {
   return { errors, value: { type, name, category, isCustom, date, location, contactInfo, description } };
 }
 
-module.exports = { validateRegister, validateLogin, validateVerify, validateResend, validateItem, CATEGORIES };
+module.exports = { validateRegister, validateLogin, validateVerify, validateResend, validateReset, validateItem, CATEGORIES };

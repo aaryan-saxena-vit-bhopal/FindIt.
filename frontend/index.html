@@ -115,7 +115,7 @@
                         <label for="login-password" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">
                             Password
                         </label>
-                        <a href="javascript:void(0)" onclick="forgotPasswordNotice()" class="text-xs font-semibold text-vtop-green hover:underline">Forgot Password?</a>
+                        <a href="javascript:void(0)" onclick="showForgot()" class="text-xs font-semibold text-vtop-green hover:underline">Forgot Password?</a>
                     </div>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -271,6 +271,95 @@
                 </div>
             </form>
 
+            <!-- ================= FORGOT PASSWORD FORM ================= -->
+            <form id="form-forgot" onsubmit="handleForgotSubmit(event)" class="space-y-5 hidden">
+                <div class="text-center space-y-1">
+                    <div class="mx-auto w-12 h-12 rounded-full bg-vtop-blue/10 flex items-center justify-center text-vtop-blue text-xl mb-2">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <h2 class="text-lg font-extrabold text-vtop-darkBlue">Forgot your password?</h2>
+                    <p class="text-xs text-slate-500">Enter your college email and we will send you a 6-digit reset code.</p>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="forgot-email" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">College Email</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-envelope"></i>
+                        </div>
+                        <input type="email" id="forgot-email" required
+                            placeholder="xyz.25bce10000@vitbhopal.ac.in"
+                            class="w-full pl-10 pr-4 py-3 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20 focus:bg-white transition-all">
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-vtop-blue hover:bg-vtop-darkBlue transition-all shadow-md shadow-vtop-blue/20 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Send reset code</span>
+                </button>
+
+                <div class="text-center text-xs font-semibold">
+                    <button type="button" onclick="backToLogin()" class="text-slate-500 hover:underline">Back to log in</button>
+                </div>
+            </form>
+
+            <!-- ================= RESET PASSWORD FORM ================= -->
+            <form id="form-reset" onsubmit="handleResetSubmit(event)" class="space-y-5 hidden">
+                <div class="text-center space-y-1">
+                    <div class="mx-auto w-12 h-12 rounded-full bg-vtop-blue/10 flex items-center justify-center text-vtop-blue text-xl mb-2">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
+                    </div>
+                    <h2 class="text-lg font-extrabold text-vtop-darkBlue">Reset your password</h2>
+                    <p class="text-xs text-slate-500">If that email has an account, we sent a 6-digit code to</p>
+                    <p id="reset-email-text" class="text-sm font-bold text-vtop-darkBlue break-all"></p>
+                    <p class="text-[11px] text-slate-400">The code expires in 10 minutes. Check your spam folder too.</p>
+                </div>
+
+                <input type="text" id="reset-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required
+                    class="w-full text-center tracking-[0.5em] text-2xl font-extrabold py-3 rounded-xl border border-slate-300 bg-vtop-inputBg focus:bg-white focus:outline-none focus:ring-2 focus:ring-vtop-blue/30 focus:border-vtop-blue transition-all"
+                    placeholder="------">
+
+                <div class="space-y-1.5">
+                    <label for="reset-password" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">New Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="reset-password" required minlength="8" maxlength="128"
+                            placeholder="Minimum 8 characters"
+                            class="w-full pl-10 pr-11 py-3 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20 focus:bg-white transition-all">
+                        <button type="button" onclick="togglePasswordVisibility('reset-password', 'reset-pass-icon')"
+                            class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-vtop-darkBlue">
+                            <i id="reset-pass-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="reset-password2" class="block text-xs font-bold uppercase tracking-wider text-vtop-gold">Confirm New Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" id="reset-password2" required minlength="8" maxlength="128"
+                            placeholder="Type it again"
+                            class="w-full pl-10 pr-4 py-3 bg-vtop-inputBg border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-vtop-blue focus:ring-2 focus:ring-vtop-blue/20 focus:bg-white transition-all">
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full py-3.5 rounded-xl font-bold text-sm text-white bg-vtop-blue hover:bg-vtop-darkBlue transition-all shadow-md shadow-vtop-blue/20 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Set new password</span>
+                </button>
+
+                <div class="flex items-center justify-between text-xs font-semibold">
+                    <button type="button" onclick="resendResetCode()" class="text-vtop-blue hover:underline">Resend code</button>
+                    <button type="button" onclick="backToLogin()" class="text-slate-500 hover:underline">Back to log in</button>
+                </div>
+            </form>
+
         </div>
     </main>
 
@@ -291,6 +380,8 @@
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
             document.getElementById('form-verify').classList.add('hidden');
+            document.getElementById('form-forgot').classList.add('hidden');
+            document.getElementById('form-reset').classList.add('hidden');
             document.getElementById('tab-bar').classList.remove('hidden');
             const tabLogin = document.getElementById('tab-login');
             const tabRegister = document.getElementById('tab-register');
@@ -449,8 +540,72 @@
             }
         }
 
-        function forgotPasswordNotice() {
-            showToast("Password reset instructions have been sent to your college administrator desk.", "info");
+// Forgot / reset password
+        let resetEmail = '';
+
+        function showOnly(formId) {
+            ['form-login', 'form-register', 'form-verify', 'form-forgot', 'form-reset'].forEach(function (id) {
+                document.getElementById(id).classList.toggle('hidden', id !== formId);
+            });
+            document.getElementById('tab-bar').classList.add('hidden');
+        }
+
+        function showForgot() {
+            const typed = document.getElementById('login-email').value.trim();
+            showOnly('form-forgot');
+            const input = document.getElementById('forgot-email');
+            if (typed) input.value = typed;
+            input.focus();
+        }
+
+        function backToLogin() {
+            switchAuthMode('login');
+        }
+
+        async function handleForgotSubmit(event) {
+            event.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim();
+            try {
+                await Api.forgotPassword(email);
+                resetEmail = email;
+                document.getElementById('reset-email-text').textContent = email;
+                showOnly('form-reset');
+                document.getElementById('reset-code').value = '';
+                document.getElementById('reset-password').value = '';
+                document.getElementById('reset-password2').value = '';
+                document.getElementById('reset-code').focus();
+                showToast("If that email has an account, a reset code is on its way.", "info");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function handleResetSubmit(event) {
+            event.preventDefault();
+            const password = document.getElementById('reset-password').value;
+            if (password !== document.getElementById('reset-password2').value) {
+                showToast("The two passwords do not match.", "error");
+                return;
+            }
+            try {
+                await Api.resetPassword(resetEmail, document.getElementById('reset-code').value.trim(), password);
+                showToast("Password changed. Please log in with your new password.", "success");
+                switchAuthMode('login');
+                document.getElementById('login-email').value = resetEmail;
+                document.getElementById('login-password').value = '';
+                document.getElementById('login-password').focus();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function resendResetCode() {
+            try {
+                await Api.forgotPassword(resetEmail);
+                showToast("If that email has an account, a new code is on its way.", "info");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
         }
 
         // Toast Notification System
